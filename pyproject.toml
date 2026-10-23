@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finpipe-tools"
+version = "1.0.0"
+description = "A 股 / 港股持仓收息、分红日历与记账小工具"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+# 注意：PEP 639 —— 写了 license 表达式就不能再加 License :: classifier，
+# setuptools>=77 会直接报 InvalidConfigError。
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

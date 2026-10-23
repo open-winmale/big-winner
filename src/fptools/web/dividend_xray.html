@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>持仓收息透视表 · finpipe-tools</title>
+<link rel="stylesheet" href="/assets/base.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">finpipe<span class="dot">·</span>tools</span>
+    <span class="spacer"></span>
+    <span class="meta" id="key-badge"></span>
+    <button class="ghost" id="btn-key" style="padding:4px 10px;font-size:12.5px">数据源 Key</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="page-head">
+    <h1>持仓收息透视表</h1>
+    <p>打开即看：未来除权/到账、税后现金、年息进度；再看持仓与分红账本。</p>
+    <p id="auto-load-note" class="auto-note"></p>
+  </div>
+
+  <!-- ═══ 收息驾驶舱：分红日历 ═══ -->
+  <div id="calendar-panel"></div>
+
+  <!-- ═══ 第 1 步：添加持仓 ═══ -->
+  <section class="card" id="positions-card">
+    <div class="step-head">
+      <span class="step-badge">1</span>
+      <div>
+        <h2>添加你的股票 <span class="hint" id="pos-count"></span></h2>
+        <p class="step-sub">选市场 → 搜索名称或代码 → 回车加入；成本 / 买入日在下方「持仓明细」补，成本和红利税会用到</p>
+      </div>
+    </div>
+
+    <div class="search-row">
+      <div class="market-tabs" id="market-tabs">
+        <button class="market-tab active" data-mkt="cn">A 股</button>
+        <button class="market-tab" data-mkt="hk">港股</button>
+      </div>
+      <div class="search-box" id="search-box">
+        <input id="sym-search" autocomplete="off" spellcheck="false"
+               placeholder="试试输入：茅台、长江电力、00700、gzmt">
+      </div>
+    </div>
+
+    <div id="chips" class="chips"></div>
+    <div id="chips-empty" class="empty-guide">
+      <div class="guide-step"><span class="guide-no">1</span>上面搜索一只股票，回车加入</div>
+      <div class="guide-step"><span class="guide-no">2</span>在胶囊里填上你持有的股数</div>
+      <div class="guide-step"><span class="guide-no">3</span>点下方「生成透视表」看结果</div>
+    </div>
+
+    <details class="holdings-details" id="holdings-details">
+      <summary id="holdings-summary">持仓明细：成本 / 买入日 / 税率覆盖</summary>
+      <div id="holdings-editor"></div>
+    </details>
+
+    <!-- ═══ 第 2 步：生成 ═══ -->
+    <div class="run-row">
+      <label class="switch" title="额外计算股息率历史分位、连续分红年数">
+        <input type="checkbox" id="chk-deep"> 深度分析（更全面，取数稍多）
+      </label>
+      <span class="spacer"></span>
+      <button class="primary btn-lg" id="btn-run">生成透视表</button>
+    </div>
+    <div id="aux-panel"></div>
+  </section>
+
+  <!-- ═══ 结果区（生成后出现，相关操作跟在结果旁）═══ -->
+  <div id="result"></div>
+
+  <!-- ═══ 分红记账：独立区域，默认折叠明细 ═══ -->
+  <div id="ledger-panel"></div>
+
+  <!-- ═══ 次要功能：默认折叠 ═══ -->
+  <section class="card more-card">
+    <button class="link" id="btn-more">▾ 更多：持仓单管理 · 生成记录 · 数据导出</button>
+    <div id="more-body" class="more-body" style="display:none">
+      <p class="muted more-explain">
+        · <strong>持仓单</strong>：把当前股票清单存在本机，下次打开免重新搜索<br>
+        · <strong>生成记录</strong>：每次生成自动留档，回看历史组合数据<br>
+        · <strong>导出 CSV</strong>：把透视表下载成 Excel 能打开的表格
+      </p>
+      <div class="toolbar">
+        <button class="ghost" id="btn-save">存为持仓单</button>
+        <button class="ghost" id="btn-load">打开持仓单</button>
+        <button class="ghost" id="btn-history">生成记录</button>
+        <button class="ghost" id="btn-export">导出 CSV (Excel)</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <div id="disclaimer"></div>
+    <div style="margin-top:6px">finpipe-tools · MIT 开源 · 数据由 finpipe 提供（PolyForm Noncommercial，仅限非商业使用）</div>
+  </div>
+</main>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

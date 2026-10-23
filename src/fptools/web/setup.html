@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>配置自己的 Key · finpipe-tools</title>
+<link rel="stylesheet" href="/assets/base.css">
+<style>
+  .step { display: flex; gap: 16px; margin: 20px 0; }
+  .step-no {
+    flex: none; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 640;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .step-body { flex: 1; }
+  .step-body h3 { margin: 4px 0 8px; font-size: 15px; }
+  .step-body p { margin: 0 0 10px; color: var(--text-2); }
+  code.inline {
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 1px 7px; font-size: 13px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre.block {
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 14px 16px; overflow-x: auto;
+    font-size: 13px; line-height: 1.7;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    margin: 10px 0;
+  }
+  .note {
+    background: var(--warn-soft); border: 1px solid #fde68a;
+    border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px;
+    color: var(--warn); margin: 14px 0;
+  }
+  .troubleshoot td:first-child { white-space: nowrap; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">finpipe<span class="dot">·</span>tools</span>
+    <span class="spacer"></span>
+    <a href="/" style="font-size:13px">← 返回工具</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="page-head">
+    <h1>配置自己的 Key</h1>
+    <p>本工具默认使用内置的共享体验 Key——可用但额度有限、高峰可能限流（429）。
+       申请自己的 AppID 后额度充足、互不影响，全程免费（非商业用途）。</p>
+  </div>
+
+  <section class="card">
+    <div class="step">
+      <div class="step-no">1</div>
+      <div class="step-body">
+        <h3>注册开放平台，获取 AppID</h3>
+        <p>打开 <a href="https://open.winmale.com" target="_blank" rel="noopener">open.winmale.com</a>，
+           微信扫码登录（注册即送免费额度）。</p>
+        <p>右上角「我的」→「开放平台」→ 左侧「我的应用」→「查看应用信息」，
+           复制 <code class="inline">client_id</code> 和 <code class="inline">api-key</code>（即 client_secret）。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-no">2</div>
+      <div class="step-body">
+        <h3>写入本机凭证文件（推荐）</h3>
+        <p>创建 <code class="inline">~/.finpipe/credentials.env</code>，内容两行：</p>
+        <pre class="block">FINPIPE_CLIENT_ID=你的client_id
+FINPIPE_CLIENT_SECRET=你的api-key</pre>
+        <p>保存后<strong>重启工具服务</strong>即可生效。凭证文件不要提交到任何 git 仓库。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-no">3</div>
+      <div class="step-body">
+        <h3>重启服务（去掉 --demo）</h3>
+        <pre class="block">cd finpipe-tools
+PYTHONPATH="src:../openwm/src" python -m fptools.server --port 8787</pre>
+        <p>页面右上角不再显示体验模式提示，即为你自己的 Key 在取数。</p>
+      </div>
+    </div>
+
+    <div class="note">
+      也可以不改文件、只用环境变量启动：
+      <code class="inline">FINPIPE_CLIENT_ID=... FINPIPE_CLIENT_SECRET=... python -m fptools.server</code>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>遇到问题</h2></div>
+    <table class="troubleshoot">
+      <tbody>
+        <tr><td>403 / POLICY_DENIED</td>
+            <td>体验 Key 的策略限制（部分接口不允许）。配置自己的 AppID 即可；若已有自己的 Key 仍报错，确认 Key 复制完整、未过期。</td></tr>
+        <tr><td>429 / 频繁限流</td>
+            <td>体验 Key 是共享池，高峰被限流属正常。配置自己的 Key 后额度独立；工具遇 429 会自动退避重试一次。</td></tr>
+        <tr><td>某字段显示 —</td>
+            <td>该标的此字段接口未返回（如未分红史、指标缺失）。工具不做猜测填充，缺失会显式标在该行「数据说明」。</td></tr>
+        <tr><td>价格略低于盘中价</td>
+            <td>现价取最新一根日 K 收盘价（体验 Key 不支持盘中快照接口）。自己的 AppID 额度允许时可换回盘中接口。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="footer">
+    <div>本工具仅做持仓数据的统计聚合，不构成任何投资建议；数据来自 finpipe，最终以上市公司公告为准；历史分红不代表未来。</div>
+  </div>
+</main>
+
+</body>
+</html>
