@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- **内置体验 Key 主动提示**：页面加载即检测当前取数是否走共享体验 Key，是则弹出
+  模态框引导配置自己的 Key（门户直达 `/setup.html`，独立模式提示环境变量）。
+  「暂不」仅当前会话有效，换 Key 后永久不再出现；demo 模式与自有 Key 用户不受影响。
+  新增 `/api/appinfo`（门户 + 波段独立 server）与 `assets/trial_key.js`。
+
 ### Changed
 
 - **品牌统一：「必赢佬」更名为「波段」**（模块名 `bigly`、命令 `python -m bigwinner.bigly`、

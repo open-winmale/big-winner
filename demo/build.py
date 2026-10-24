@@ -48,6 +48,7 @@ def main() -> int:
     # ---- 静态资源 ----
     shutil.copy(Path(__file__).parent / "pybridge.js", OUT / "pybridge.js")
     shutil.copy(SHOUXI_WEB / "assets" / "base.css", OUT / "assets" / "base.css")
+    shutil.copy(SHOUXI_WEB / "assets" / "trial_key.js", OUT / "assets" / "trial_key.js")
     for shot in ("shot-dividend-xray.png", "shot-bigly.png"):
         shutil.copy(SHOUXI_WEB / "assets" / shot, OUT / "assets" / shot)
 

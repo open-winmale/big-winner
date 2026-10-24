@@ -75,6 +75,9 @@ export FINPIPE_CLIENT_SECRET=...
 # 或写入 ~/.finpipe/credentials.env
 ```
 
+> 页面检测到当前在用内置体验 Key 时会**主动弹窗提醒**（每个新会话一次，「暂不」后
+> 本会话内不再弹）；换成自己的 Key 后永久消失。demo 模式不消耗 Key、不提示。
+
 ## 工具一览
 
 | 工具 | 状态 | 说明 |

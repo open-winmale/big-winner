@@ -879,6 +879,15 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, b"<h1>404</h1>", "text/html; charset=utf-8")
                 return
             self._send_html(Path(tool.get("web_dir", WEB_DIR)) / tool["page"])
+        elif route == "/api/appinfo":
+            info: dict[str, Any] = {"demo": RUNTIME.demo, "trial": False,
+                                    "setup_url": "/setup.html"}
+            if not RUNTIME.demo:
+                f = RUNTIME.fetcher()
+                inner = getattr(f, "inner", f)
+                uses = getattr(inner, "uses_trial_key", None)
+                info["trial"] = bool(uses()) if uses else False
+            self._send_json(200, info)
         elif route == "/api/tools":
             self._send_json(200, {"tools": [
                 {"slug": s, **{k: v for k, v in t.items()

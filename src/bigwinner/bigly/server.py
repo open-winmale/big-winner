@@ -19,6 +19,7 @@ from bigwinner.bigly import levels as lv_mod
 from bigwinner.bigly import suggest as sg_mod
 from bigwinner.bigly.fetchers import DemoBiglyData, FinpipeBiglyData
 from bigwinner.common.symbols import SymbolDirectory
+from bigwinner.common.fetchers import using_trial_key
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
@@ -195,6 +196,13 @@ def make_handler(data, directory: SymbolDirectory | None = None):  # noqa: C901 
                 self._json({"results": directory.search(q, market, limit=8),
                             "total": len(directory),
                             "as_of": directory.freshness(market)})
+            elif path == "/api/appinfo":
+                demo = bool(getattr(data, "demo", False))
+                cli = getattr(data, "_cli", None)
+                self._json({"demo": demo,
+                            "trial": bool(not demo and cli is not None
+                                          and using_trial_key(cli)),
+                            "setup_url": None})
             elif path == "/api/bigly/meta":
                 self._json({"tool": TOOL_META, "demo": getattr(data, "demo", False)})
             else:

@@ -122,3 +122,49 @@ def test_registry_entry_points_to_existing_page():
     entry = srv.TOOLS["bigly"]
     page = srv.Path(entry["web_dir"]) / entry["page"]
     assert page.is_file()
+
+
+def test_appinfo_demo_reports_no_trial(base_url):
+    """demo 模式用罐头数据不消耗 Key：appinfo 恒 trial=False。"""
+    with urllib.request.urlopen(base_url + "/api/appinfo") as r:
+        info = json.load(r)
+    assert info["demo"] is True and info["trial"] is False
+    assert info["setup_url"] == "/setup.html"
+
+
+def test_using_trial_key_env_fallback(monkeypatch):
+    """finpipe 不可用时的退化路径：未显式配置即视为体验 Key。"""
+    import sys
+
+    from bigwinner.common.fetchers import using_trial_key
+
+    class Cli:
+        client_id = "someone"
+
+    # 模拟未安装 finpipe：父子模块缓存都要置 None（全量跑时子模块可能已被先前的测试导入并缓存）
+    monkeypatch.setitem(sys.modules, "finpipe", None)
+    monkeypatch.setitem(sys.modules, "finpipe._experience", None)
+    monkeypatch.delenv("FINPIPE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("OPEN_PLATFORM_CLIENT_ID", raising=False)
+    assert using_trial_key(Cli()) is True
+    monkeypatch.setenv("FINPIPE_CLIENT_ID", "mine")
+    assert using_trial_key(Cli()) is False
+
+
+def test_fetcher_uses_trial_key(monkeypatch):
+    """自有凭证 → False；体验凭证 → True（比对 finpipe 内部体验凭证）。"""
+    from bigwinner.common.fetchers import FinpipeFetcher, using_trial_key
+
+    class Cli:
+        def __init__(self, cid):
+            self.client_id = cid
+
+    monkeypatch.delenv("FINPIPE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("OPEN_PLATFORM_CLIENT_ID", raising=False)
+    own = FinpipeFetcher(client=Cli("my-own"), hk_client=object())
+    assert own.uses_trial_key() is False
+    pytest.importorskip("finpipe")
+    from finpipe._experience import credentials as _exp
+    trial = FinpipeFetcher(client=Cli(_exp()[0]), hk_client=object())
+    assert trial.uses_trial_key() is True
+    assert using_trial_key(Cli("other")) is False
