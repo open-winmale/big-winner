@@ -122,14 +122,14 @@
       <div class="step-head">
         <span class="step-badge">2</span>
         <div><h2>设置买卖点</h2>
-          <p class="step-sub">默认推荐区间（不高估、距最低点不太远、亏损时间不过长、成交次数不过少）；也可取通道轨或自填倍数</p>
+          <p class="step-sub">默认推荐区间（不高估、距最低点不太远、亏损时间不过长、成交次数不过少）；
+             也可切换自定义区间，自填低买 / 高卖倍数</p>
         </div>
       </div>
       <div style="margin-bottom:10px">
         <span class="seg" id="seg-source">
           <button data-v="suggest" class="active">推荐区间</button>
-          <button data-v="channel">通道轨</button>
-          <button data-v="user">自填倍数</button>
+          <button data-v="user">自定义区间</button>
         </span>
       </div>
       <div id="user-inputs" style="display:none;margin-bottom:10px">
@@ -441,10 +441,10 @@ function renderLevels(){
   } else if(source === "user"){
     buy = $("in-low").value ? L.buy_price / L.low_multiple * parseFloat($("in-low").value) : L.buy_price;
     sell = $("in-high").value ? L.sell_price / L.high_multiple * parseFloat($("in-high").value) : L.sell_price;
-    srcLabel = "自填倍数";
+    srcLabel = "自定义区间";
   } else {
     buy = L.buy_price; sell = L.sell_price;
-    srcLabel = "通道轨（估值数据）";
+    srcLabel = "通道轨（窗口内未找到满足约束的推荐组合）";
   }
   const dB = buy ? buy / state.last_close - 1 : null;
   const dS = sell ? sell / state.last_close - 1 : null;
