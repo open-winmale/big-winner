@@ -16,7 +16,9 @@ from urllib.parse import urlparse
 from bigwinner.bigly import backtest as bt_mod
 from bigwinner.bigly import channel as ch_mod
 from bigwinner.bigly import levels as lv_mod
+from bigwinner.bigly import suggest as sg_mod
 from bigwinner.bigly.fetchers import DemoBiglyData, FinpipeBiglyData
+from bigwinner.common.symbols import SymbolDirectory
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
@@ -27,7 +29,7 @@ TOOL_META = {
 }
 
 _VALID_METRICS = ("pe", "pb", "ps", "pr")
-_VALID_WINDOWS = ("1y", "2y", "3y")  # 上限 3 年
+_VALID_WINDOWS = ("6m", "1y", "2y", "3y")  # 上限 3 年，默认半年
 
 
 def _pick(payload: dict, key: str, default=None):
@@ -38,7 +40,7 @@ def _pick(payload: dict, key: str, default=None):
 def run_channel(data, payload: dict) -> dict:
     symbol = str(_pick(payload, "symbol", "") or "").strip()
     metric = str(_pick(payload, "metric", "pe") or "pe")
-    window = str(_pick(payload, "window", "3y") or "3y")
+    window = str(_pick(payload, "window", "6m") or "6m")
     low = _pick(payload, "low")
     high = _pick(payload, "high")
     if metric not in _VALID_METRICS:
@@ -71,6 +73,7 @@ def run_channel(data, payload: dict) -> dict:
             "high_entry_drawdown": high_stats,
             "stop_reference": min(closes) if closes else None,
         },
+        "extremes": bt_mod.price_extremes(bars, last_close),
         "disclaimer": "统计描述与历史回放，不构成投资建议；买卖点由你自己设定与负责。",
     }
 
@@ -78,19 +81,22 @@ def run_channel(data, payload: dict) -> dict:
 def run_backtest(data, payload: dict) -> dict:
     symbol = str(_pick(payload, "symbol", "") or "").strip()
     metric = str(_pick(payload, "metric", "pe") or "pe")
-    window = str(_pick(payload, "window", "3y") or "3y")
+    window = str(_pick(payload, "window", "6m") or "6m")
     buy = _pick(payload, "buy")
     sell = _pick(payload, "sell")
     stop = _pick(payload, "stop")
     if not symbol:
         return {"error": "缺少 symbol"}
-    for name, v in (("buy", buy), ("sell", sell)):
-        try:
-            fv = float(v)
-        except (TypeError, ValueError):
-            return {"error": f"{name} 不是有效数字"}
-        if fv <= 0:
-            return {"error": f"{name} 必须为正数"}
+    # auto 模式：不传 buy/sell → 先在窗口内搜索推荐区间，再按推荐值回拨
+    auto = buy is None and sell is None
+    if not auto:
+        for name, v in (("buy", buy), ("sell", sell)):
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                return {"error": f"{name} 不是有效数字"}
+            if fv <= 0:
+                return {"error": f"{name} 必须为正数"}
     if stop is not None:
         try:
             if float(stop) <= 0:
@@ -103,15 +109,32 @@ def run_backtest(data, payload: dict) -> dict:
     bars = data.bars(symbol, window)
     if not bars:
         return {"error": "窗口内无日 K 数据"}
-    bt = bt_mod.backtest_levels(bars, float(buy), float(sell),
-                                stop_loss=float(stop) if stop is not None else None)
-    cmp_ = bt_mod.compare_with_hold(bars, bt)
-    # 安全检查：买入位是否处于高位（通道 +1σ 对应价 / 窗口 p75）
     hist = data.hist_stats(symbol, metric, window)
     channel = ch_mod.build_channel(hist)
     last_close = data.last_close(symbol)
+    suggestion = None
+    if auto:
+        if channel is None:
+            return {"error": "该标的窗口内估值序列为空（如亏损期 PE 无数据）；可切换 pb 或调整窗口"}
+        suggestion = sg_mod.suggest_levels(bars, channel, last_close, metric)
+        if suggestion is not None:
+            buy_f, sell_f = suggestion["buy_price"], suggestion["sell_price"]
+        else:  # 窗口内无可触发组合 → 回退通道轨
+            buy_f = lv_mod.implied_price(last_close, channel["lower2"], channel["current"])
+            sell_f = lv_mod.implied_price(last_close, channel["upper2"], channel["current"])
+            if not buy_f or not sell_f:
+                return {"error": "无法确定买卖参考价"}
+    else:
+        buy_f, sell_f = float(buy), float(sell)
+
+    # 窗口内多轮进出回放：止盈/止损后资金回笼、卖出次日可再买
+    bt = bt_mod.backtest_levels(bars, buy_f, sell_f,
+                                stop_loss=float(stop) if stop is not None else None,
+                                roundtrips=None)
+    cmp_ = bt_mod.compare_with_hold(bars, bt)
+    # 安全检查：买入位是否处于高位（通道 +1σ 对应价 / 窗口 p75）
     closes = [float(b["close"]) for b in bars if b.get("close")]
-    safety = bt_mod.buy_safety_check(float(buy), channel, closes, last_close=last_close)
+    safety = bt_mod.buy_safety_check(buy_f, channel, closes, last_close=last_close)
     if bt.get("no_stop_worst_drawdown") is not None:
         safety["no_stop_worst_drawdown"] = bt["no_stop_worst_drawdown"]
     return {
@@ -119,9 +142,12 @@ def run_backtest(data, payload: dict) -> dict:
         "metric": metric,
         "window": window,
         "demo": getattr(data, "demo", False),
+        "suggest": suggestion,
+        "levels_used": {"buy_price": buy_f, "sell_price": sell_f},
         "backtest": bt,
         "compare": cmp_,
         "safety": safety,
+        "price_stats": bt_mod.price_zone_stats(bars, buy_f, sell_f, last_close=last_close),
         "disclaimer": "统计描述与历史回放，不构成投资建议；买卖点由你自己设定与负责。",
     }
 
@@ -130,7 +156,9 @@ def build_data(demo: bool):
     return DemoBiglyData() if demo else FinpipeBiglyData()
 
 
-def make_handler(data):  # noqa: C901 - 单文件服务的路由集中处
+def make_handler(data, directory: SymbolDirectory | None = None):  # noqa: C901 - 单文件服务的路由集中处
+    directory = directory or SymbolDirectory()
+
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):  # 安静
             pass
@@ -159,6 +187,14 @@ def make_handler(data):  # noqa: C901 - 单文件服务的路由集中处
                 self._file("bigly.html", "text/html; charset=utf-8")
             elif path == "/assets/base.css":
                 self._file("assets/base.css", "text/css; charset=utf-8")
+            elif path == "/api/bigly/symbols":
+                from urllib.parse import parse_qs
+                query = parse_qs(urlparse(self.path).query)
+                q = (query.get("q") or [""])[0]
+                market = (query.get("market") or ["cn"])[0]
+                self._json({"results": directory.search(q, market, limit=8),
+                            "total": len(directory),
+                            "as_of": directory.freshness(market)})
             elif path == "/api/bigly/meta":
                 self._json({"tool": TOOL_META, "demo": getattr(data, "demo", False)})
             else:

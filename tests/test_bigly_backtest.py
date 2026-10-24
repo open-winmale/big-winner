@@ -84,3 +84,82 @@ def test_no_stop_worst_drawdown_reported():
 
 def test_max_drawdown_helper():
     assert max_drawdown([10.0, 12.0, 6.0, 11.0]) == pytest.approx(-0.5)
+
+
+def test_underwater_days_counted():
+    # 亏损持仓 = 窗口内持仓且收盘低于成交买价的交易日（衡量套牢时长）
+    bars = [
+        bar("01-01", 10.0, 10.5, 9.7, 10.0),   # 未触发
+        bar("01-02", 9.6, 10.2, 9.4, 9.9),     # 买入 @9.5；收盘 9.9 ≥ 买价 → 不算
+        bar("01-03", 9.0, 9.6, 8.8, 9.2),      # 收盘 9.2 < 9.5 → 亏损持仓
+        bar("01-04", 9.1, 9.4, 8.9, 9.1),      # 亏损持仓
+        bar("01-05", 9.0, 9.5, 8.9, 9.4),      # 亏损持仓
+        bar("01-06", 9.5, 10.4, 9.4, 10.1),    # 收盘 10.1 ≥ 9.5 → 不算；未到卖点
+    ]
+    bt = backtest_levels(bars, buy_price=9.5, sell_price=11.0)
+    assert bt["still_holding"] is True
+    assert bt["underwater_days"] == 3
+    assert bt["underwater_ratio"] == pytest.approx(3 / 6)
+
+
+def test_underwater_none_when_never_bought():
+    bars = [bar("01-01", 10.0, 10.5, 9.7, 10.0)]
+    bt = backtest_levels(bars, buy_price=5.0, sell_price=20.0)
+    assert bt["underwater_days"] is None and bt["underwater_ratio"] is None
+
+
+def test_multi_roundtrips_reenter_after_target():
+    # roundtrips=None：止盈出场后资金回笼，卖出次日可再次买入 → 两轮完整进出
+    bars = [
+        bar("01-01", 10.0, 10.5, 9.6, 10.0),  # 未触发（low 9.6 > 买点 9.5）
+        bar("01-02", 9.4, 9.9, 9.3, 9.8),     # 第一轮买入 @9.4
+        bar("01-03", 10.0, 11.2, 9.9, 11.0),  # 第一轮止盈 @11.0
+        bar("01-04", 10.5, 10.9, 10.4, 10.8),  # 空仓（卖出次日才可再买）
+        bar("01-05", 9.4, 9.8, 9.2, 9.5),     # 第二轮买入 @9.4
+        bar("01-06", 10.0, 11.5, 9.9, 11.2),  # 第二轮止盈 @11.0
+    ]
+    bt = backtest_levels(bars, buy_price=9.5, sell_price=11.0, roundtrips=None)
+    assert bt["entries"] == 2 and bt["roundtrips_done"] == 2
+    assert bt["return_pct"] == pytest.approx((11.0 / 9.4) * (11.0 / 9.4) - 1)
+    assert bt["days_held"] == 2  # 每轮各持仓 1 个交易日间隔
+    assert bt["still_holding"] is False
+    assert bt["sell_date"] == "01-06" and bt["sell_reason"] == "target"
+    assert [e["type"] for e in bt["events"]] == ["buy", "sell", "buy", "sell"]
+    # 默认 roundtrips=1 保持平台拨测语义：第一轮止盈即结束
+    bt1 = backtest_levels(bars, buy_price=9.5, sell_price=11.0)
+    assert bt1["entries"] == 1 and bt1["roundtrips_done"] == 1
+    assert bt1["return_pct"] == pytest.approx(11.0 / 9.4 - 1)
+
+
+def test_multi_roundtrips_stop_then_reenter():
+    # 止损出场后同样可再入场；最后一次出场口径 = 第二轮的止盈
+    bars = [
+        bar("01-01", 10.0, 10.5, 9.6, 10.0),
+        bar("01-02", 9.4, 9.9, 9.3, 9.8),     # 第一轮买入 @9.4
+        bar("01-03", 9.0, 9.2, 8.4, 8.5),     # 止损 @8.5
+        bar("01-04", 8.0, 8.6, 7.9, 8.4),     # 第二轮买入 @8.0
+        bar("01-05", 9.5, 11.4, 9.4, 11.0),   # 第二轮止盈 @11.0
+    ]
+    bt = backtest_levels(bars, buy_price=9.5, sell_price=11.0,
+                         stop_loss=8.5, roundtrips=None)
+    assert bt["stop_count"] == 1 and bt["roundtrips_done"] == 2
+    assert bt["hit_sell"] is True and bt["sell_reason"] == "target"
+    assert bt["return_pct"] == pytest.approx((8.5 / 9.4) * (11.0 / 8.0) - 1)
+
+
+def test_compare_multi_roundtrips_counts():
+    from bigwinner.bigly.backtest import compare_with_hold
+
+    bars = [
+        bar("01-01", 10.0, 10.5, 9.6, 10.0),
+        bar("01-02", 9.4, 9.9, 9.3, 9.8),
+        bar("01-03", 10.0, 11.2, 9.9, 11.0),
+        bar("01-04", 10.5, 10.9, 10.4, 10.8),
+        bar("01-05", 9.4, 9.8, 9.2, 9.5),
+        bar("01-06", 10.0, 11.5, 9.9, 11.2),
+    ]
+    bt = backtest_levels(bars, buy_price=9.5, sell_price=11.0, roundtrips=None)
+    cmp_ = compare_with_hold(bars, bt)
+    assert cmp_["swing"]["trades"] == 2
+    # 持仓日合计 2 + 两轮的买卖日各 1 = 4 天持仓，空仓 2/6
+    assert cmp_["swing"]["flat_ratio"] == pytest.approx(2 / 6)

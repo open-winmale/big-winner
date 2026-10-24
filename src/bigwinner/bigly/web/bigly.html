@@ -14,7 +14,10 @@
   .seg button{border:none;background:var(--surface);padding:6px 14px;font-size:13px;
     color:var(--fg);cursor:pointer}
   .seg button.active{background:var(--accent);color:#fff;font-weight:560}
-  .chart-box{height:56vh;min-height:360px}
+  .chart-box{height:300px}
+  .chips{font-size:12.5px;line-height:1.7;border-radius:8px;padding:6px 10px;margin:8px 0;
+    background:#ecfdf5;color:#047857}
+  .chips.relax{background:#fffbeb;color:#92400e}
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0}
   .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media (max-width:1080px){.duo{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
@@ -28,6 +31,13 @@
   .cmp th,.cmp td{border:1px solid var(--border);padding:7px 10px;text-align:center}
   .cmp th{background:var(--accent-soft);color:var(--accent-hover)}
   .cmp td.win{background:#ecfdf5;font-weight:640;color:#047857}
+  .dist3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+  @media (max-width:1080px){.dist3{grid-template-columns:1fr}}
+  .dist3 h3{margin:0 0 6px;font-size:13.5px}
+  .mini{width:100%;border-collapse:collapse;font-size:13px}
+  .mini td{padding:5px 2px;border-bottom:1px dashed var(--border)}
+  .mini td.num{text-align:right;font-weight:600;white-space:nowrap}
+  .sym-box{max-width:180px;flex:none}
   .verdict{margin-top:8px;font-size:13px;color:#475569}
   .foot{color:#64748b;font-size:12.5px;margin-top:18px;line-height:1.7}
 </style>
@@ -56,18 +66,24 @@
   <!-- 控制条 -->
   <section class="card">
     <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
-      <label>代码 <input id="sym" value="600519" size="8" style="padding:6px 8px"></label>
+      <label>代码
+        <span class="search-box sym-box" id="sym-box">
+          <input id="sym" value="600519" autocomplete="off" spellcheck="false"
+                 style="padding:6px 8px;width:130px" placeholder="代码 / 名称 / 拼音">
+        </span>
+      </label>
       <span>指标
         <span class="seg" id="seg-metric">
           <button data-v="pe" class="active">PE</button>
           <button data-v="pb">PB</button>
         </span>
       </span>
-      <span>窗口（上限 3 年）
+      <span>窗口（上限 3 年，默认半年）
         <span class="seg" id="seg-window">
-          <button data-v="1y">1y</button>
-          <button data-v="2y">2y</button>
-          <button data-v="3y" class="active">3y</button>
+          <button data-v="6m" class="active">半年</button>
+          <button data-v="1y">1 年</button>
+          <button data-v="2y">2 年</button>
+          <button data-v="3y">3 年</button>
         </span>
       </span>
       <button class="primary" id="btn-load">加载通道</button>
@@ -106,12 +122,13 @@
       <div class="step-head">
         <span class="step-badge">2</span>
         <div><h2>设置买卖点</h2>
-          <p class="step-sub">默认取通道轨（低估线买 / 高估线卖）；也可自填目标倍数即时换算价格</p>
+          <p class="step-sub">默认推荐区间（不高估、距最低点不太远、亏损时间不过长、成交次数不过少）；也可取通道轨或自填倍数</p>
         </div>
       </div>
       <div style="margin-bottom:10px">
         <span class="seg" id="seg-source">
-          <button data-v="channel" class="active">通道轨</button>
+          <button data-v="suggest" class="active">推荐区间</button>
+          <button data-v="channel">通道轨</button>
           <button data-v="user">自填倍数</button>
         </span>
       </div>
@@ -129,7 +146,25 @@
     </section>
   </div>
 
-  <!-- ⑤ 拨测结果：波段 vs 长持 -->
+  <!-- ⑤ 区间分布与极值 -->
+  <section class="card" id="dist-card" style="display:none">
+    <div class="step-head">
+      <span class="step-badge">📊</span>
+      <div><h2>区间分布与极值</h2>
+        <p class="step-sub">窗口内逐日统计：估值三区分布 · 股价相对当前买卖点 · 距极值溢出</p>
+      </div>
+    </div>
+    <div class="dist3">
+      <div><h3>估值倍数（<span id="dist-metric-n">—</span>）</h3>
+        <table class="mini"><tbody id="col-metric"></tbody></table></div>
+      <div><h3>股价 × 买卖点（<span id="dist-price-n">—</span>）</h3>
+        <table class="mini"><tbody id="col-price"></tbody></table></div>
+      <div><h3>股价极值（收盘口径）</h3>
+        <table class="mini"><tbody id="col-extremes"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ⑥ 拨测结果：波段 vs 长持 -->
   <section class="card" id="result-card" style="display:none">
     <div class="step-head">
       <span class="step-badge">3</span>
@@ -142,9 +177,15 @@
 
   <p class="foot">
     <b>算法说明</b>：估值通道 = 均值 ± Nσ（σ 为窗口内总体标准差 ÷N，下轨截 0），与平台 web「估值通道」同源；
-    买卖点换算 = 现价 × 目标倍数 / 当前倍数（隐含口径内 EPS/BPS 恒定）。窗口上限 3 年。
+    买卖点换算 = 现价 × 目标倍数 / 当前倍数（隐含口径内 EPS/BPS 恒定）。窗口 6 个月/1/2/3 年（上限 3 年），默认半年，进页自动加载。
+    <b>推荐区间</b> = 窗口内穷举候选买卖倍数组合，须满足四条约束：买点不高于均值（不高估）、
+    买入价距窗口最低收盘 ≤15%（距最低点不要太远）、亏损持仓日占窗口 ≤35%（亏损时间不要过长）、
+    完整进出 ≥2 次（成交次数不要太少）；在满足约束的组合中按多轮回放收益择优（同收益取进出更多者），
+    无组合满足时逐级放宽并如实标注，全程无完整进出则回退通道轨。
     <b>拨测规则</b>：日 low≤买点触发买入（成交 min(open,买点)）；持仓日 high≥卖点止盈（max(open,卖点)）、
-    low≤止损止损（min(open,止损)）；同日双触发按保守先止损；T+1 买入当日不卖。
+    low≤止损止损（min(open,止损)）；同日双触发按保守先止损；T+1 买入当日不卖；
+    止盈/止损出场后资金回笼，卖出次日可再次买入，回放窗口内全部进出；
+    多轮收益按各轮复利（空仓期收益 0，不含现金利息）。
     <b>简化假设</b>：不含涨跌停与成交量约束；qfq 前复权口径已消除除权跳空。
     <br><b>免责声明</b>：本工具全部输出为统计描述与历史回放，不构成任何投资建议；
     买卖点由你自己设定与负责；历史表现不代表未来；数据以上市公司公告与平台数据源为准。
@@ -157,7 +198,8 @@ const pctText = (v, digits=1) => v == null ? "—" : (v * 100).toFixed(digits) +
 const pctileText = (v) => v == null ? "—" : (v * 100).toFixed(0) + "%";
 const zoneText = {belowLow:"低于低估线", low:"偏低", normal:"正常区间", high:"偏高", aboveHigh:"高于高估线"};
 const zoneCls = {belowLow:"badge ok", low:"badge ok", normal:"badge", high:"badge warn", aboveHigh:"badge warn"};
-let chart = null, state = {symbol:null, metric:"pe", window:"3y", channel:null, levels:null};
+let chart = null, state = {symbol:null, metric:"pe", window:"6m",
+  channel:null, levels:null, suggest:null, last_close:null, sym_name:null};
 
 function seg(id, cb){
   $(id).addEventListener("click", (e) => {
@@ -167,6 +209,7 @@ function seg(id, cb){
   });
 }
 function segVal(id){ return $(id).querySelector(".active").dataset.v; }
+const fmtPct = (v, digits=1) => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(digits) + "%";
 async function post(url, payload){
   const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"},
                               body: JSON.stringify(payload)});
@@ -181,7 +224,7 @@ seg("seg-source", (v)=>{
 });
 ["in-low","in-high"].forEach(id => $(id).addEventListener("input", renderLevels));
 
-$("btn-load").onclick = async () => {
+async function load(){
   state.symbol = $("sym").value.trim();
   if(!state.symbol){ $("load-note").textContent = "请输入代码"; return; }
   $("load-note").textContent = "加载中…";
@@ -189,43 +232,150 @@ $("btn-load").onclick = async () => {
                                               window: state.window});
   if(r.error){ $("load-note").textContent = r.error; return; }
   state.channel = r.channel; state.levels = r.levels;
-  $("load-note").textContent = r.demo ? "（演示数据）" : `已加载 ${r.symbol}`;
-  drawChart(r); renderKpis(r); renderSafety(r); renderLevels();
-};
+  state.last_close = r.last_close; state.suggest = null;
+  $("load-note").textContent = r.demo ? "（演示数据）"
+    : `已加载 ${r.symbol}${state.sym_name ? " · " + state.sym_name : ""}`;
+  drawChart(r); renderKpis(r); renderSafety(r); renderDist(r); renderLevels();
+  await autoBacktest();
+}
+
+// 自动模式：后端先搜索推荐区间，再按推荐值回拨（无推荐时回退通道轨）
+async function autoBacktest(){
+  $("bt-note").textContent = "搜索推荐区间并回拨…";
+  const r = await post("/api/bigly/backtest", {symbol: state.symbol, metric: state.metric,
+                                               window: state.window});
+  if(r.error){ $("bt-note").textContent = r.error; return; }
+  state.suggest = r.suggest;
+  $("bt-note").textContent = "";
+  renderLevels();
+  renderResult(r);
+}
+
+$("btn-load").onclick = load;
+
+/* ---- 代码搜索联想（与收息佬同款：finpipe 离线全市场代码目录）---- */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let symDebounce = null, symDrop = null, symResults = [];
+function closeSymDrop(){ if(symDrop){ symDrop.remove(); symDrop = null; } }
+function symPick(item){
+  $("sym").value = item.code;
+  state.sym_name = item.name || null;
+  closeSymDrop();
+  load();
+}
+async function symQuery(q){
+  try{
+    const d = await (await fetch("/api/bigly/symbols?q=" + encodeURIComponent(q))).json();
+    symResults = d.results || [];
+    closeSymDrop();
+    symDrop = document.createElement("div");
+    symDrop.className = "sym-dropdown";
+    $("sym-box").appendChild(symDrop);
+    if(!symResults.length){
+      symDrop.innerHTML = '<div class="sym-empty">无匹配；可直接回车输入 6 位代码</div>';
+      return;
+    }
+    symDrop.innerHTML = symResults.map((it, i) => `
+      <div class="sym-item${i === 0 ? " active" : ""}" data-i="${i}">
+        <span class="sym-code">${esc(it.code)}</span>
+        <span class="sym-name">${esc(it.name)}</span>
+      </div>`).join("")
+      + (d.as_of ? `<div class="sym-fresh">代码目录快照 ${esc(d.as_of)}</div>` : "");
+    symDrop.querySelectorAll(".sym-item").forEach((el) => {
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        symPick(symResults[Number(el.getAttribute("data-i"))]);
+      });
+    });
+  }catch(e){ /* 搜索失败静默 */ }
+}
+$("sym").addEventListener("input", () => {
+  state.sym_name = null;  // 手工输入视为换票，清掉联想带来的名称
+  const q = $("sym").value.trim();
+  clearTimeout(symDebounce);
+  if(!q){ closeSymDrop(); return; }
+  symDebounce = setTimeout(() => symQuery(q), 200);
+});
+$("sym").addEventListener("keydown", (e) => {
+  if(!symDrop){
+    if(e.key === "Enter" && /^\d{6}$/.test($("sym").value.trim())){
+      e.preventDefault();
+      load();  // 直接输 6 位代码回车即加载
+    }
+    return;
+  }
+  const items = symDrop.querySelectorAll(".sym-item");
+  const active = symDrop.querySelector(".sym-item.active");
+  let idx = items.length ? Array.from(items).indexOf(active) : -1;
+  if(e.key === "ArrowDown" && items.length){
+    e.preventDefault();
+    if(active) active.classList.remove("active");
+    idx = (idx + 1) % items.length;
+    items[idx].classList.add("active");
+  } else if(e.key === "ArrowUp" && items.length){
+    e.preventDefault();
+    if(active) active.classList.remove("active");
+    idx = (idx - 1 + items.length) % items.length;
+    items[idx].classList.add("active");
+  } else if(e.key === "Enter"){
+    e.preventDefault();
+    const it = symResults[idx >= 0 ? idx : 0];
+    symPick(it || {code: $("sym").value.trim()});
+  } else if(e.key === "Escape"){
+    closeSymDrop();
+  }
+});
+document.addEventListener("click", (e) => {
+  if(symDrop && !$("sym-box").contains(e.target)) closeSymDrop();
+});
 
 function drawChart(r){
   const pts = r.series.map(p => [p[0] * 1000, p[1]]);
-  const dates = pts.map(p => p[0]);
-  const line = (v, name, color, dash, width) => ({type:"line", data:dates.map(()=>v), name,
+  if(!pts.length) return;
+  const t0 = pts[0][0], t1 = pts[pts.length - 1][0];
+  const mainName = (r.metric || "pe").toUpperCase();
+  // 横向轨线必须带时间坐标（两点式）：纯数值序列会把时间轴拉到 1970
+  const rule = (v, name, color, dash, width) => ({type:"line", data:[[t0, v], [t1, v]], name,
     symbol:"none", lineStyle:{color, width: width||1.5, type: dash?"dashed":"solid"}, silent:true});
   const c = r.channel;
   chart = chart || echarts.init($("chart"));
   chart.setOption({
     animation:false,
-    grid:{left:52, right:70, top:24, bottom:34},
-    tooltip:{trigger:"axis", valueFormatter:v => typeof v === "number" ? v.toFixed(2) : v},
+    grid:{left:52, right:70, top:16, bottom:28},
+    tooltip:{trigger:"axis",
+      formatter: (params) => {
+        const arr = Array.isArray(params) ? params : [params];
+        const m = arr.find(p => p.seriesName === mainName) || arr[0];
+        const d = new Date(m.axisValue != null ? m.axisValue : m.value[0]);
+        const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+        return `${ds}<br/>${m.marker}${m.seriesName} ${Number(m.value[1]).toFixed(2)}`;
+      }},
     xAxis:{type:"time"},
     yAxis:{type:"value", scale:true,
       axisLabel:{formatter: v => v.toFixed(2)}},
     series:[
-      {type:"line", name: (r.metric||"pe").toUpperCase(), data:pts, symbol:"none",
+      {type:"line", name: mainName, data:pts, symbol:"none",
        lineStyle:{color:"#2563eb", width:1.6}, z:5},
-      {type:"line", name:"低估线", data:dates.map(()=>c.lower2), symbol:"none",
+      {type:"line", name:"低估线", data:[[t0, c.lower2], [t1, c.lower2]], symbol:"none",
        lineStyle:{color:"#16a34a", width:1.6, type:"dashed"}, silent:true,
        endLabel:{show:true, formatter:"低估线", color:"#16a34a"}},
-      {type:"line", name:"高估线", data:dates.map(()=>c.upper2), symbol:"none",
+      {type:"line", name:"高估线", data:[[t0, c.upper2], [t1, c.upper2]], symbol:"none",
        lineStyle:{color:"#dc2626", width:1.6, type:"dashed"}, silent:true,
        endLabel:{show:true, formatter:"高估线", color:"#dc2626"}},
-      line(c.lower1, "−1σ", "#94a3b8", true),
-      line(c.upper1, "+1σ", "#94a3b8", true),
-      line(c.avg, "均值", "#f59e0b", true),
-      ...(c.median != null ? [line(c.median, "中位", "#6366f1", true, 1)] : []),
-      {type:"scatter", name:"当前", data:[[dates[dates.length-1], c.current]],
+      rule(c.lower1, "−1σ", "#94a3b8", true),
+      rule(c.upper1, "+1σ", "#94a3b8", true),
+      rule(c.avg, "均值", "#f59e0b", true),
+      ...(c.median != null ? [rule(c.median, "中位", "#6366f1", true, 1)] : []),
+      {type:"scatter", name:"当前", data:[[t1, c.current]],
        symbolSize:9, itemStyle:{color:"#dc2626"}, z:10,
        label:{show:true, formatter:() => c.current.toFixed(2), position:"right", color:"#dc2626"}},
     ],
   });
+  chart.resize();  // 自动加载早于首帧布局时 init 会拿到 0 宽画布，强制按容器尺寸重排
 }
+
+window.addEventListener("resize", () => { if(chart) chart.resize(); });
 
 function renderKpis(r){
   const c = r.channel;
@@ -268,30 +418,53 @@ function renderSafety(r){
 
 function renderLevels(){
   const L = state.levels;
-  if(!L){ $("levels-body").innerHTML = `<p class="meta">加载通道后展示。</p>`; return; }
+  if(!L){ $("levels-body").innerHTML = `<p class="meta">加载后展示。</p>`; return; }
   const source = segVal("seg-source");
-  const buy = source === "user" && $("in-low").value
-    ? L.buy_price / L.low_multiple * parseFloat($("in-low").value) : L.buy_price;
-  const sell = source === "user" && $("in-high").value
-    ? L.sell_price / L.high_multiple * parseFloat($("in-high").value) : L.sell_price;
-  const dB = L.distance_to_buy_pct, dS = L.distance_to_sell_pct;
+  const sug = state.suggest;
+  let buy, sell, srcLabel, extra = "";
+  if(source === "suggest" && sug){
+    buy = sug.buy_price; sell = sug.sell_price;
+    srcLabel = "推荐区间（窗口内搜索）";
+    const c = sug.criteria, m = state.metric.toUpperCase();
+    const cls = c.strict_ok ? "chips" : "chips relax";
+    const nearTxt = (c.near_low_pct >= 0 ? "+" : "−") + Math.abs(c.near_low_pct * 100).toFixed(1) + "%";
+    extra = `<div class="${cls}">✓ 不高估（${m} 买点 ${sug.buy_multiple.toFixed(2)} ≤ 均值 ${state.channel.avg.toFixed(2)}）
+      · 距窗口最低收盘 ${nearTxt}${c.near_low_pct > 0.15 ? "（放宽）" : ""}
+      · 亏损持仓占比 ${(c.underwater_ratio * 100).toFixed(0)}%${c.underwater_ratio > 0.35 ? "（放宽）" : ""}
+      · 完整进出 ${c.roundtrips_done} 次${c.roundtrips_done < 2 ? "（放宽）" : ""}</div>
+      <p class="meta">${sug.note}</p>
+      <p class="meta">该区间本窗口回放（多轮进出）：收益 <b>${fmtPct(sug.stats.return_pct)}</b> ·
+        回撤 ${fmtPct(sug.stats.mdd)} · 持仓 ${sug.stats.days_held != null ? sug.stats.days_held + " 天" : "—"}</p>`;
+  } else if(source === "suggest"){
+    buy = L.buy_price; sell = L.sell_price;
+    srcLabel = "通道轨（窗口内未找到满足约束的推荐组合）";
+  } else if(source === "user"){
+    buy = $("in-low").value ? L.buy_price / L.low_multiple * parseFloat($("in-low").value) : L.buy_price;
+    sell = $("in-high").value ? L.sell_price / L.high_multiple * parseFloat($("in-high").value) : L.sell_price;
+    srcLabel = "自填倍数";
+  } else {
+    buy = L.buy_price; sell = L.sell_price;
+    srcLabel = "通道轨（估值数据）";
+  }
+  const dB = buy ? buy / state.last_close - 1 : null;
+  const dS = sell ? sell / state.last_close - 1 : null;
   const bar = (d) => {
     if(d == null) return "";
     const w = Math.min(Math.abs(d) * 5 * 100 / 2, 50);
-    const dir = d >= 0 ? "left" : "right";
-    return `<div class="dist-row"><span>${d >= 0 ? "现价下方 " : "现价上方 "}${Math.abs(d*100).toFixed(1)}%</span>
-      <span class="dist-bar"><i style="${dir}:0;width:${w}%"></i></span></div>`;
+    const st = d >= 0 ? "left:50%" : "right:50%";  // 中点=现价，向目标价所在侧生长
+    return `<div class="dist-row"><span>${d >= 0 ? "现价上方 " : "现价下方 "}${Math.abs(d*100).toFixed(1)}%</span>
+      <span class="dist-bar"><i style="${st};width:${w}%"></i></span></div>`;
   };
   $("levels-body").innerHTML = `
-    <p>来源：<b>${source === "user" ? "自填倍数" : "通道轨（估值数据）"}</b> ·
+    <p>来源：<b>${srcLabel}</b> ·
       当前倍数 ${L.metric_current.toFixed(2)}</p>
-    <p>低买 <b>${L.low_multiple.toFixed(2)}</b> → 买入参考价
+    <p>低买 <b>${source === "suggest" && sug ? sug.buy_multiple.toFixed(2) : L.low_multiple.toFixed(2)}</b> → 买入参考价
       <b class="red-note" style="color:#16a34a">${buy ? buy.toFixed(2) : "—"}</b> 元
       ${bar(dB)}</p>
-    <p>高卖 <b>${L.high_multiple.toFixed(2)}</b> → 卖出参考价
+    <p>高卖 <b>${source === "suggest" && sug ? sug.sell_multiple.toFixed(2) : L.high_multiple.toFixed(2)}</b> → 卖出参考价
       <b style="color:#dc2626">${sell ? sell.toFixed(2) : "—"}</b> 元
       ${bar(dS)}</p>
-    <p class="meta">${L.assumption}</p>`;
+    ${extra || `<p class="meta">${L.assumption}</p>`}`;
   state.levels._buy = buy; state.levels._sell = sell;
 }
 
@@ -310,21 +483,60 @@ $("btn-bt").onclick = async () => {
   renderResult(r);
 };
 
+function renderDist(r){
+  $("dist-card").style.display = "block";
+  const c = r.channel, z = c.zones, ex = r.extremes || {};
+  const m = (r.metric || "pe").toUpperCase();
+  const fmtDate = (d) => d ? String(d).slice(5) : "—";
+  const row = (label, d) => `<tr><td>${label}</td><td class="num">${d && d.ratio != null
+    ? `${d.days} 天 · ${(d.ratio * 100).toFixed(0)}%` : "—"}</td></tr>`;
+  $("dist-metric-n").textContent = `窗口 ${z ? z.n : "—"} 日`;
+  $("col-metric").innerHTML =
+    row(`低于低估线 ${c.lower2.toFixed(2)}`, z && z.below_low)
+    + row("通道内（±2σ）", z && z.inside)
+    + row(`高于高估线 ${c.upper2.toFixed(2)}`, z && z.above_high);
+  const lo = ex.low, hi = ex.high;
+  const row2 = (label, v) => `<tr><td>${label}</td><td class="num">${v}</td></tr>`;
+  $("col-extremes").innerHTML =
+    row2(`最低 ${lo ? lo.price.toFixed(2) : "—"}（${lo ? fmtDate(lo.date) : "—"}）`,
+      lo && lo.premium_pct != null ? `现价溢价 +${(lo.premium_pct * 100).toFixed(1)}%` : "—")
+    + row2(`最高 ${hi ? hi.price.toFixed(2) : "—"}（${hi ? fmtDate(hi.date) : "—"}）`,
+      hi && hi.discount_pct != null ? `现价距高点 ${(hi.discount_pct * 100).toFixed(1)}%` : "—")
+    + row2("现价", ex.last_close != null ? ex.last_close.toFixed(2) : "—");
+  $("col-price").innerHTML = `<tr><td class="meta">回拨后按当前买卖点统计。</td></tr>`;
+  $("dist-price-n").textContent = "回拨后展示";
+}
+
+function renderPriceStats(ps){
+  if(!ps) return;
+  const row = (label, d) => `<tr><td>${label}</td><td class="num">${d && d.ratio != null
+    ? `${d.days} 天 · ${(d.ratio * 100).toFixed(0)}%` : "—"}</td></tr>`;
+  $("dist-price-n").textContent = `窗口 ${ps.n} 日`;
+  $("col-price").innerHTML =
+    row(`低于买点 ${ps.buy_price.toFixed(2)}`, ps.below_buy)
+    + row("买点 ~ 卖点之间", ps.inside)
+    + row(`高于卖点 ${ps.sell_price.toFixed(2)}`, ps.above_sell);
+}
+
 function renderResult(r){
+  renderPriceStats(r.price_stats);
   $("result-card").style.display = "block";
-  $("result-card").scrollIntoView({behavior:"smooth"});
+  $("result-card").scrollIntoView({behavior:"smooth", block:"nearest"});
   const bt = r.backtest, cmp = r.compare || {};
   const sw = cmp.swing || {}, hd = cmp.hold || {}, d = cmp.delta || {};
-  const fmtPct = v => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+  const swingLabel = r.suggest ? "波段（推荐区间）" : "波段（你的买卖点）";
   const winSwing = d.return_spread != null && d.return_spread >= 0;
   const winHold = d.return_spread != null && d.return_spread < 0;
   let stopRow = "";
   if(bt.sell_reason === "stop"){
     stopRow = `<tr><td>止损</td><td class="red-note">已触发（${bt.sell_date}）</td><td>—</td><td>—</td></tr>`;
   }
+  const uwRow = (r.suggest && bt.underwater_days != null)
+    ? `<tr><td>亏损持仓</td><td>${bt.underwater_days} / ${bt.window.bars} 个交易日
+        （收盘低于买价）</td><td>—</td><td>—</td></tr>` : "";
   $("result-body").innerHTML = `
     <table class="cmp">
-      <tr><th>维度</th><th>波段（你的买卖点）</th><th>长持（同期一动不动）</th><th>差值</th></tr>
+      <tr><th>维度</th><th>${swingLabel}</th><th>长持（同期一动不动）</th><th>差值</th></tr>
       <tr><td>区间收益</td>
         <td class="${winSwing ? "win" : ""}">${fmtPct(sw.return_pct)}</td>
         <td class="${winHold ? "win" : ""}">${fmtPct(hd.return_pct)}</td>
@@ -336,8 +548,11 @@ function renderResult(r){
         <td>${sw.days_held != null ? sw.days_held : "—"}（空仓 ${pctText(sw.flat_ratio)}）</td>
         <td>${hd.days || "—"} 天（100%）</td><td>—</td></tr>
       <tr><td>触发</td>
-        <td>${bt.hit_buy ? `买入 ${bt.buy_date}` : "未触发买入"}</td>
+        <td>${bt.hit_buy
+          ? `${bt.roundtrips_done || 0} 次完整进出 · 首买 ${bt.buy_date}${bt.still_holding ? "（窗口末仍持仓）" : ""}`
+          : "未触发买入"}</td>
         <td>—</td><td>—</td></tr>
+      ${uwRow}
       ${stopRow}
     </table>
     ${cmp.verdict ? `<p class="verdict">${cmp.verdict}</p>` : ""}
@@ -355,6 +570,7 @@ function renderResult(r){
     if(meta.demo) $("demo-badge").textContent = "演示数据";
     $("key-badge").textContent = meta.demo ? "" : "finpipe 实时数据";
   }catch(e){ /* ignore */ }
+  load();  // 进页自动加载默认标的（半年窗口 → 通道 + 推荐区间 + 回拨直出）
 })();
 </script>
 </body>

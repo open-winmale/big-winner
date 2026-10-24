@@ -11,7 +11,9 @@ import random
 from typing import Any
 
 #: 窗口 → 日 K 根数（约 244 交易日/年，留余量）
-WINDOW_BARS = {"1y": 260, "2y": 510, "3y": 760}
+WINDOW_BARS = {"6m": 130, "1y": 260, "2y": 510, "3y": 760}
+#: 窗口 → demo 估值序列点数（demo 全量 730 点 ≈ 3 年）
+_WINDOW_POINTS = {"6m": 122, "1y": 244, "2y": 488, "3y": 730}
 
 
 class FinpipeBiglyData:
@@ -41,13 +43,14 @@ class FinpipeBiglyData:
     def bars(self, symbol: str, window: str) -> list[dict]:
         rows = self._cli.call("kline.query_bars_adj", sym=symbol,
                               limit=WINDOW_BARS.get(window, 260), adj="qfq")
-        return rows if isinstance(rows, list) else []
+        if not isinstance(rows, list):
+            return []
+        # store 返回新在前；拨测状态机要求旧→新升序（ISO 日期字典序即可比）
+        return sorted(rows, key=lambda r: str(r.get("date", "")))
 
 
 class DemoBiglyData:
     """确定性罐头数据（600900 风格的 PB 通道 + 正弦叠加随机游走价格）。"""
-
-    demo = True
 
     demo = True
 
@@ -82,19 +85,21 @@ class DemoBiglyData:
                                "open": o, "high": hi, "low": lo, "close": close})
 
     def hist_stats(self, symbol: str, metric: str, window: str) -> dict:
-        vals = [pt[1] for pt in self._series]
+        n = _WINDOW_POINTS.get(window, 244)
+        vals = [pt[1] for pt in self._series][-n:]
+        pts = self._series[-n:]
         ordered = sorted(vals)
         mid = len(ordered) // 2
         median = ordered[mid]
         return {
             "avg": sum(vals) / len(vals),
-            "current": self._current,
+            "current": vals[-1],
             "median": median,
             "min": ordered[0],
             "max": ordered[-1],
-            "pct": sum(1 for v in vals if v <= self._current) / len(vals),
+            "pct": sum(1 for v in vals if v <= vals[-1]) / len(vals),
             "count": len(vals),
-            "series": list(self._series),
+            "series": [list(pt) for pt in pts],
         }
 
     def last_close(self, symbol: str) -> float | None:

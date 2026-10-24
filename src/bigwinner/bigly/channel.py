@@ -65,6 +65,23 @@ def coverage_within_band(values: list[float], band: dict[str, float]) -> float:
     return inside / len(values)
 
 
+def zone_counts(values: list[float], band: dict[str, float]) -> dict:
+    """估值倍数三区分布（天数+占比）：低于低估线 / 通道内（±2σ，含轨上）/ 高于高估线。
+
+    与 coverage 同口径（轨上一点计入通道内）；n 为窗口内序列点数。
+    """
+    n = len(values)
+    below = sum(1 for v in values if v < band["lower2"])
+    above = sum(1 for v in values if v > band["upper2"])
+    inside = n - below - above
+
+    def _pack(c: int) -> dict:
+        return {"days": c, "ratio": (c / n) if n else None}
+
+    return {"n": n, "below_low": _pack(below), "inside": _pack(inside),
+            "above_high": _pack(above)}
+
+
 def _series_values(hist: dict) -> list[float]:
     return [float(pt[1]) for pt in (hist.get("series") or []) if len(pt) >= 2]
 
@@ -98,6 +115,7 @@ def build_channel(hist: dict) -> dict | None:
         "z": z,
         "zone": zone_of(float(current), band),
         "coverage": coverage_within_band(series, band),
+        "zones": zone_counts(series, band),
     }
 
 
