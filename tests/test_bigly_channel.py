@@ -1,4 +1,4 @@
-"""必赢佬·估值通道：与平台 web「估值通道」算法数值对齐（percentileBand.ts 同例）。"""
+"""波段·估值通道：与平台 web「估值通道」算法数值对齐（percentileBand.ts 同例）。"""
 import math
 
 import pytest

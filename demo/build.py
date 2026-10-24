@@ -87,7 +87,7 @@ def main() -> int:
     ], "shouxi.html")
     (OUT / "shouxi.html").write_text(shouxi, encoding="utf-8")
 
-    # ---- 必赢佬页 ----
+    # ---- 波段页 ----
     bigly = (BIGLY_WEB / "bigly.html").read_text(encoding="utf-8")
     bigly = _replace(bigly, [
         ('href="/assets/base.css"', 'href="assets/base.css"'),

@@ -1,4 +1,4 @@
-"""必赢佬·拨测状态机：规则逐条对齐（限价成交 / T+1 / 同日双触保守 / 持仓中）。"""
+"""波段·拨测状态机：规则逐条对齐（限价成交 / T+1 / 同日双触保守 / 持仓中）。"""
 import pytest
 
 from bigwinner.bigly.backtest import backtest_levels, max_drawdown

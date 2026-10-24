@@ -1,4 +1,4 @@
-"""必赢佬数据层：finpipe 取数与离线样例（Fetcher 可替换）。
+"""波段数据层：finpipe 取数与离线样例（Fetcher 可替换）。
 
 真实模式经 finpipe SDK 取数（估值历史统计 / qfq 日 K / 现价）；3 年窗口约
 730 个交易日，故客户端 max_limit 放宽到 800。演示模式（--demo）用确定性

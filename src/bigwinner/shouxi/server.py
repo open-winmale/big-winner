@@ -1,6 +1,6 @@
 """单端口 Web 服务：每个小工具一个独立 HTML 页 + 一个 JSON 计算接口。
 
-`/` 是工具总览页；收息佬与必赢佬都挂在本进程（必赢佬另保留独立入口
+`/` 是工具总览页；收息佬与波段都挂在本进程（波段另保留独立入口
 `python -m bigwinner.bigly` :8788，二者互不影响）。
 
 启动：
@@ -37,7 +37,7 @@ from bigwinner.shouxi.tools import ledger as ledger_mod
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
 #: 工具注册表：新增工具只需在这里加一条 + 一个 HTML + 一个 handler；
-#: 页面不在本包 web/ 下时，用 web_dir 指到别处（如必赢佬）
+#: 页面不在本包 web/ 下时，用 web_dir 指到别处（如波段）
 TOOLS: dict[str, dict[str, str]] = {
     "dividend-xray": {
         "title": "收息佬",
@@ -110,7 +110,7 @@ _BIGLY_DATA: Any = None
 
 
 def bigly_data() -> Any:
-    """必赢佬的取数实例，首次请求时才构造（demo→罐头数据，真实→finpipe SDK），
+    """波段的取数实例，首次请求时才构造（demo→罐头数据，真实→finpipe SDK），
     未安装 finpipe 不影响服务启动。"""
     global _BIGLY_DATA
     if _BIGLY_DATA is None:
@@ -829,7 +829,7 @@ HANDLERS = {
     "diagnose": run_diagnose,
     "key-status": key_status,
     "key-save": key_save,
-    # 必赢佬：复用其纯函数 API，data 用本进程的惰性实例
+    # 波段：复用其纯函数 API，data 用本进程的惰性实例
     "bigly/channel": lambda payload: bigly_srv.run_channel(bigly_data(), payload),
     "bigly/backtest": lambda payload: bigly_srv.run_backtest(bigly_data(), payload),
 }
@@ -893,7 +893,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {"results": DIRECTORY.search(q, market, limit=8),
                                   "total": len(DIRECTORY),
                                   "as_of": DIRECTORY.freshness(market)})
-        elif route == "/api/bigly/symbols":  # 必赢佬页面的取码接口，同 DIRECTORY
+        elif route == "/api/bigly/symbols":  # 波段页面的取码接口，同 DIRECTORY
             from urllib.parse import parse_qs
             query = urlparse(self.path).query
             q = (parse_qs(query).get("q") or [""])[0]

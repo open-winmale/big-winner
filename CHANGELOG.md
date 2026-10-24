@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **品牌统一：「必赢佬」更名为「波段」**（模块名 `bigly`、命令 `python -m bigwinner.bigly`、
+  端口不变）——页面标题/门户卡片/API title/测试描述同步；区间设置为推荐区间（默认）+
+  自定义区间两档（1c1cfa3），README 与 `levels.py` docstring 一并对齐，通道线仅作
+  推荐无解时的内部回退。
+- **README 店面化重构（321 → 273 行）**：新增目录导航与徽章；工具一览删除过时的
+  「通道轨/自填倍数换算」表述、站外失效内链改在线 demo 链接；项目结构树更新为
+  shouxi/bigly/common 实际布局；测试节更新（19 文件 / 153 用例）；门户卡片
+  「买卖位建议」改为与合规红线一致的「买卖点区间参考」。
+- **新增测试 CI**（`.github/workflows/ci.yml`）：push/PR 跑全量离线 pytest
+  （Python 3.10 / 3.12），README 挂测试徽章。
+
 ## 1.3.0 — 2026-10-24
 
 ### Added

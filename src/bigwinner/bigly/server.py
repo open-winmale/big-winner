@@ -1,6 +1,6 @@
-"""必赢佬独立 Web 服务：python -m bigwinner.bigly（:8788）。
+"""波段独立 Web 服务：python -m bigwinner.bigly（:8788）。
 
-与收息佬同款零依赖栈（标准库 http.server）；只挂必赢佬自己的页面与计算接口，
+与收息佬同款零依赖栈（标准库 http.server）；只挂波段自己的页面与计算接口，
 两个工具的端口互不影响、可同时启动。输出全部为统计描述与历史回放，
 不构成投资建议。
 """
@@ -24,7 +24,7 @@ WEB_DIR = Path(__file__).resolve().parent / "web"
 
 TOOL_META = {
     "slug": "bigly",
-    "title": "必赢佬",
+    "title": "波段",
     "tagline": "估值通道 · 买卖点参考 · 拨测回看 —— We're gonna win so much.",
 }
 
@@ -223,7 +223,7 @@ def make_handler(data, directory: SymbolDirectory | None = None):  # noqa: C901 
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="必赢佬（Bigly）独立 Web 服务")
+    parser = argparse.ArgumentParser(description="波段（Bigly）独立 Web 服务")
     parser.add_argument("--port", type=int, default=8788)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--demo", action="store_true",
@@ -233,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.demo:
         print("提示：真实取数需要 finpipe 凭证（FINPIPE_CLIENT_ID/SECRET 或 "
               "~/.finpipe/credentials.env）；无凭证可加 --demo 看样例。", file=sys.stderr)
-    print(f"必赢佬 · http://{args.host}:{args.port}/tools/bigly/"
+    print(f"波段 · http://{args.host}:{args.port}/tools/bigly/"
           + ("（演示数据）" if args.demo else ""), file=sys.stderr)
     ThreadingHTTPServer((args.host, args.port),
                         make_handler(data)).serve_forever()

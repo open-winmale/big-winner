@@ -1,4 +1,4 @@
-"""必赢佬·独立服务：路由、--demo 离线、与收息佬互不影响、免责声明存在。"""
+"""波段·独立服务：路由、--demo 离线、与收息佬互不影响、免责声明存在。"""
 import json
 import threading
 import time
@@ -42,7 +42,7 @@ def test_page_served_with_disclaimer_banner(base_url):
     status, html = _get(base + "/tools/bigly/")
     assert status == 200
     assert "免责声明" in html and "统计描述与历史回放" in html
-    assert "必赢佬" in html and "echarts" in html
+    assert "波段" in html and "echarts" in html
 
 
 def test_channel_endpoint_demo(base_url):
@@ -171,7 +171,7 @@ def test_symbols_search_empty_query(base_url):
 
 
 def test_shouxi_portal_registry():
-    """单端口门户：必赢佬已注册进收息佬 TOOLS，页面文件仍在必赢佬包内。"""
+    """单端口门户：波段已注册进收息佬 TOOLS，页面文件仍在波段包内。"""
     import bigwinner.shouxi.server as srv
 
     assert "dividend-xray" in srv.TOOLS

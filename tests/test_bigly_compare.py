@@ -1,4 +1,4 @@
-"""必赢佬·波段 vs 长持对比：基准数学与差值方向。"""
+"""波段·波段 vs 长持对比：基准数学与差值方向。"""
 import pytest
 
 from bigwinner.bigly.backtest import backtest_levels, compare_with_hold

@@ -1,4 +1,4 @@
-"""必赢佬·安全边界：高位介入回撤统计与买入位安全检查。"""
+"""波段·安全边界：高位介入回撤统计与买入位安全检查。"""
 import pytest
 
 from bigwinner.bigly.backtest import buy_safety_check, high_entry_drawdown_stats

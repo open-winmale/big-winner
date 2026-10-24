@@ -2,7 +2,7 @@
 
 两个工具各自独立目录与入口：
     python -m bigwinner.shouxi   # 收息佬（:8787）
-    python -m bigwinner.bigly    # 必赢佬（:8788）
+    python -m bigwinner.bigly    # 波段（:8788）
 """
 from bigwinner.shouxi.server import Handler, main  # noqa: F401
 

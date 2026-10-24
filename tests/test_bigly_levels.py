@@ -1,4 +1,4 @@
-"""必赢佬·买卖点换算：通道轨默认 / 用户估计透传 / 线性换算数学 / 容错。"""
+"""波段·买卖点换算：通道回退默认 / 自定义区间透传 / 线性换算数学 / 容错。"""
 import pytest
 
 from bigwinner.bigly import levels as lv
