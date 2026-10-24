@@ -6,6 +6,9 @@
 > 一组围绕 A 股 / 港股持仓与分红的小工具。每个工具一个独立网页，数据来自
 > [finpipe](https://github.com/open-winmale/finpipe)，只做事实与统计聚合。
 
+**▶ 免安装在线体验**：<https://open-winmale.github.io/big-winner/>
+—— 浏览器内直接运行（内置样例数据，首次加载约 10–20 秒），无需 Python、无需 finpipe 凭证。
+
 | 收息佬 · 持仓透视与分红日历 | 必赢佬 · 估值通道与买卖点参考 |
 |---|---|
 | ![收息佬：持仓透视表与派息稳定性看板](src/bigwinner/shouxi/web/assets/shot-dividend-xray.png) | ![必赢佬：估值通道与安全边界](src/bigwinner/shouxi/web/assets/shot-bigly.png) |

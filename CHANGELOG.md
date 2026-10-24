@@ -4,6 +4,12 @@
 
 ### Added
 
+- **免安装在线体验（GitHub Pages）**：<https://open-winmale.github.io/big-winner/>。
+  `demo/build.py` 把全部 Python 源码打进静态页，浏览器内用 Pyodide 执行真实服务端
+  代码（demo 罐头数据），`demo/pybridge.js` 拦截 `/api/*` 与 `/export/*` 请求转发给
+  同一套 `HANDLERS` —— 与本地服务/pytest 零逻辑分叉。推送 main 自动构建发布
+  （`.github/workflows/pages.yml`，configure-pages 自动开通 Pages）。两个工具均可
+  完整交互：透视表/日历/质量/诊股、估值通道/推荐区间/回拨。
 - **总览页工具贴图**：`/` 的两张工具卡片各嵌入一张应用主内容截图（demo 模式截取，
   `assets/shot-dividend-xray.png` / `shot-bigly.png`，16:10 裁切），`/assets/` 支持
   png；同时移除总览页两个「规划中」占位卡，首页只呈现可用工具。

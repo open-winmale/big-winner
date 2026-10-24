@@ -1,0 +1,46 @@
+# 在线演示站：构建 demo/site/ 并发布到 GitHub Pages。
+# 访客打开 https://open-winmale.github.io/big-winner/ 即可免安装体验（浏览器内
+# Pyodide 跑真实服务端代码，demo 罐头数据）。configure-pages 的 enablement
+# 会自动开通 Pages，无需手动到仓库设置里点。
+name: demo-pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["src/**", "demo/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python demo/build.py
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: demo/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
