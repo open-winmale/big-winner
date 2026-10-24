@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from bigwinner.tools.dividend_quality import (
+from bigwinner.shouxi.tools.dividend_quality import (
     dividend_continuity,
     evaluate,
     payout_stats,

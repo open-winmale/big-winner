@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from bigwinner.fetchers import (
+from bigwinner.common.fetchers import (
     FakeFetcher,
     FinpipeFetcher,
     _market,
@@ -17,7 +17,7 @@ from bigwinner.fetchers import (
     positions_from_payload,
     sdk_symbol,
 )
-from bigwinner.tools.dividend_xray import Position
+from bigwinner.shouxi.tools.dividend_xray import Position
 
 
 class FakeIndicator:

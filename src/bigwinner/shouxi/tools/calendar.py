@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any, Iterable
 
-from bigwinner.tools.ledger import parse_day, parse_rate, resolve_tax_ratio
+from bigwinner.shouxi.tools.ledger import parse_day, parse_rate, resolve_tax_ratio
 
 #: 数据源占位日期（预案尚未确定除权日）
 PLACEHOLDER_YEAR = 2099

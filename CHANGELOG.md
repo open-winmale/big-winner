@@ -1,5 +1,27 @@
 # Changelog
 
+# Changelog
+
+## 1.2.0 — 2026-10-24
+
+### Added
+
+- **新工具「必赢佬」（Bigly，`/tools/bigly/`，独立启动 :8788）**：估值通道买卖点参考
+  + 拨测回看。估值通道与平台 web「估值通道」算法同源（均值±Nσ、σ=窗口序列总体
+  标准差 ÷N、下轨截 0），数据来自 finpipe `cli.valuation.hist_stats`（1.3.0）；
+  买卖点最低/最高可取通道轨或用户自填目标倍数（线性换算，EPS/BPS 恒定假设）；
+  拨测状态机（限价成交、同日双触保守先止损、T+1）在真实 qfq 日 K 上回放，并给出
+  **「波段 vs 长持」同窗收益对比**。安全边界：高位警示、高位介入回撤统计（中位/最差）、
+  止损参考与无止损最差浮亏提示；免责声明三处显著呈现。窗口上限 3 年。
+
+### Changed
+
+- **双工具独立目录与独立入口**：`src/bigwinner/shouxi/`（收息佬，`python -m
+  bigwinner.shouxi`，:8787）与 `src/bigwinner/bigly/`（必赢佬，`python -m
+  bigwinner.bigly`，:8788）各自独立启动互不影响；共享底座（fetchers/store/symbols/
+  export/watchlist_sync）迁至 `src/bigwinner/common/`；`python -m bigwinner.server`
+  保留为收息佬兼容别名。
+
 ## 1.1.0 — 2026-10-24
 
 ### Changed

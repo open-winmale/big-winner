@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-import bigwinner.server as srv
-from bigwinner.fetchers import FakeFetcher
+import bigwinner.shouxi.server as srv
+from bigwinner.common.fetchers import FakeFetcher
 
 
 def quality_payload(**overrides):

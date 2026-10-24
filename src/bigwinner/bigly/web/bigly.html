@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>必赢佬 · 估值通道买卖点与拨测</title>
+<link rel="stylesheet" href="/assets/base.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  .banner{background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;
+    color:#92400e;padding:10px 14px;border-radius:8px;margin:12px 0;font-size:13.5px}
+  .banner b{font-weight:650}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .seg button{border:none;background:var(--surface);padding:6px 14px;font-size:13px;
+    color:var(--fg);cursor:pointer}
+  .seg button.active{background:var(--accent);color:#fff;font-weight:560}
+  .chart-box{height:56vh;min-height:360px}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0}
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:1080px){.duo{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+  .safety-warn{border:1.5px solid #dc2626;background:#fef2f2;border-radius:10px}
+  .safety-ok{border:1px solid var(--border);background:var(--surface)}
+  .red-note{color:#dc2626;font-weight:600}
+  .dist-row{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
+  .dist-bar{flex:1;height:8px;border-radius:4px;background:#e2e8f0;position:relative;overflow:hidden}
+  .dist-bar i{position:absolute;top:0;bottom:0;left:50%;background:var(--accent);border-radius:4px}
+  .cmp{width:100%;border-collapse:collapse;font-size:13.5px}
+  .cmp th,.cmp td{border:1px solid var(--border);padding:7px 10px;text-align:center}
+  .cmp th{background:var(--accent-soft);color:var(--accent-hover)}
+  .cmp td.win{background:#ecfdf5;font-weight:640;color:#047857}
+  .verdict{margin-top:8px;font-size:13px;color:#475569}
+  .foot{color:#64748b;font-size:12.5px;margin-top:18px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">必赢佬 <span class="dot">·</span> bigly</span>
+    <span class="spacer"></span>
+    <span class="meta" id="demo-badge"></span>
+    <span class="meta" id="key-badge"></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="banner">⚠️ <b>免责声明：</b>本工具输出<b>统计描述与历史回放</b>，不构成任何投资建议；
+    买卖点由你自己设定与负责。历史表现不代表未来。</div>
+
+  <div class="page-head">
+    <h1>必赢佬 <span style="font-size:15px;color:#64748b">Bigly</span></h1>
+    <p>估值通道 · 买卖点参考 · 拨测回看 —— 看清位置，再设点；设完先回拨，再谈收益。</p>
+  </div>
+
+  <!-- 控制条 -->
+  <section class="card">
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+      <label>代码 <input id="sym" value="600519" size="8" style="padding:6px 8px"></label>
+      <span>指标
+        <span class="seg" id="seg-metric">
+          <button data-v="pe" class="active">PE</button>
+          <button data-v="pb">PB</button>
+        </span>
+      </span>
+      <span>窗口（上限 3 年）
+        <span class="seg" id="seg-window">
+          <button data-v="1y">1y</button>
+          <button data-v="2y">2y</button>
+          <button data-v="3y" class="active">3y</button>
+        </span>
+      </span>
+      <button class="primary" id="btn-load">加载通道</button>
+      <span id="load-note" class="meta"></span>
+    </div>
+  </section>
+
+  <!-- ① 通道主图 -->
+  <section class="card">
+    <div class="step-head">
+      <span class="step-badge">1</span>
+      <div><h2>估值通道</h2>
+        <p class="step-sub">均值 ± Nσ 通道（σ=窗口内总体标准差，下轨截 0）；琥珀虚线=均值，靛蓝虚线=中位</p>
+      </div>
+    </div>
+    <div id="chart" class="chart-box"></div>
+  </section>
+
+  <!-- ② 状态条 -->
+  <div class="kpis" id="kpis"></div>
+
+  <div class="duo">
+    <!-- ③ 安全边界卡 -->
+    <section class="card" id="safety-card">
+      <div class="step-head">
+        <span class="step-badge">⚠</span>
+        <div><h2>安全边界</h2>
+          <p class="step-sub">描述性统计：历史上「买在类似位置」之后发生了什么</p>
+        </div>
+      </div>
+      <div id="safety-body"><p class="meta">加载通道后展示。</p></div>
+    </section>
+
+    <!-- ④ 买卖点卡 -->
+    <section class="card">
+      <div class="step-head">
+        <span class="step-badge">2</span>
+        <div><h2>设置买卖点</h2>
+          <p class="step-sub">默认取通道轨（低估线买 / 高估线卖）；也可自填目标倍数即时换算价格</p>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <span class="seg" id="seg-source">
+          <button data-v="channel" class="active">通道轨</button>
+          <button data-v="user">自填倍数</button>
+        </span>
+      </div>
+      <div id="user-inputs" style="display:none;margin-bottom:10px">
+        <label>低买倍数 <input id="in-low" type="number" step="0.1" style="width:80px"></label>
+        <label style="margin-left:12px">高卖倍数 <input id="in-high" type="number" step="0.1" style="width:80px"></label>
+        <p class="meta" style="margin:6px 0 0">换算假设口径内 EPS/BPS 恒定；金融/亏损股建议用 PB。</p>
+      </div>
+      <div id="levels-body"><p class="meta">加载通道后展示。</p></div>
+      <div style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px">
+        <label>止损价（可选）<input id="in-stop" type="number" step="0.01" style="width:90px"></label>
+        <button class="primary" id="btn-bt" style="margin-left:12px">开始回拨</button>
+        <span id="bt-note" class="meta"></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ⑤ 拨测结果：波段 vs 长持 -->
+  <section class="card" id="result-card" style="display:none">
+    <div class="step-head">
+      <span class="step-badge">3</span>
+      <div><h2>拨测结果：波段 vs 长持</h2>
+        <p class="step-sub">同窗口历史回放；长持基准 = 首日收盘买入持有至窗口末（不含现金收益）</p>
+      </div>
+    </div>
+    <div id="result-body"></div>
+  </section>
+
+  <p class="foot">
+    <b>算法说明</b>：估值通道 = 均值 ± Nσ（σ 为窗口内总体标准差 ÷N，下轨截 0），与平台 web「估值通道」同源；
+    买卖点换算 = 现价 × 目标倍数 / 当前倍数（隐含口径内 EPS/BPS 恒定）。窗口上限 3 年。
+    <b>拨测规则</b>：日 low≤买点触发买入（成交 min(open,买点)）；持仓日 high≥卖点止盈（max(open,卖点)）、
+    low≤止损止损（min(open,止损)）；同日双触发按保守先止损；T+1 买入当日不卖。
+    <b>简化假设</b>：不含涨跌停与成交量约束；qfq 前复权口径已消除除权跳空。
+    <br><b>免责声明</b>：本工具全部输出为统计描述与历史回放，不构成任何投资建议；
+    买卖点由你自己设定与负责；历史表现不代表未来；数据以上市公司公告与平台数据源为准。
+  </p>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const pctText = (v, digits=1) => v == null ? "—" : (v * 100).toFixed(digits) + "%";
+const pctileText = (v) => v == null ? "—" : (v * 100).toFixed(0) + "%";
+const zoneText = {belowLow:"低于低估线", low:"偏低", normal:"正常区间", high:"偏高", aboveHigh:"高于高估线"};
+const zoneCls = {belowLow:"badge ok", low:"badge ok", normal:"badge", high:"badge warn", aboveHigh:"badge warn"};
+let chart = null, state = {symbol:null, metric:"pe", window:"3y", channel:null, levels:null};
+
+function seg(id, cb){
+  $(id).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if(!b) return;
+    [...$(id).children].forEach(x=>x.classList.remove("active"));
+    b.classList.add("active"); cb(b.dataset.v);
+  });
+}
+function segVal(id){ return $(id).querySelector(".active").dataset.v; }
+async function post(url, payload){
+  const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"},
+                              body: JSON.stringify(payload)});
+  return r.json();
+}
+
+seg("seg-metric", (v)=>{ state.metric = v; });
+seg("seg-window", (v)=>{ state.window = v; });
+seg("seg-source", (v)=>{
+  $("user-inputs").style.display = v === "user" ? "block" : "none";
+  renderLevels();
+});
+["in-low","in-high"].forEach(id => $(id).addEventListener("input", renderLevels));
+
+$("btn-load").onclick = async () => {
+  state.symbol = $("sym").value.trim();
+  if(!state.symbol){ $("load-note").textContent = "请输入代码"; return; }
+  $("load-note").textContent = "加载中…";
+  const r = await post("/api/bigly/channel", {symbol: state.symbol, metric: state.metric,
+                                              window: state.window});
+  if(r.error){ $("load-note").textContent = r.error; return; }
+  state.channel = r.channel; state.levels = r.levels;
+  $("load-note").textContent = r.demo ? "（演示数据）" : `已加载 ${r.symbol}`;
+  drawChart(r); renderKpis(r); renderSafety(r); renderLevels();
+};
+
+function drawChart(r){
+  const pts = r.series.map(p => [p[0] * 1000, p[1]]);
+  const dates = pts.map(p => p[0]);
+  const line = (v, name, color, dash, width) => ({type:"line", data:dates.map(()=>v), name,
+    symbol:"none", lineStyle:{color, width: width||1.5, type: dash?"dashed":"solid"}, silent:true});
+  const c = r.channel;
+  chart = chart || echarts.init($("chart"));
+  chart.setOption({
+    animation:false,
+    grid:{left:52, right:70, top:24, bottom:34},
+    tooltip:{trigger:"axis", valueFormatter:v => typeof v === "number" ? v.toFixed(2) : v},
+    xAxis:{type:"time"},
+    yAxis:{type:"value", scale:true,
+      axisLabel:{formatter: v => v.toFixed(2)}},
+    series:[
+      {type:"line", name: (r.metric||"pe").toUpperCase(), data:pts, symbol:"none",
+       lineStyle:{color:"#2563eb", width:1.6}, z:5},
+      {type:"line", name:"低估线", data:dates.map(()=>c.lower2), symbol:"none",
+       lineStyle:{color:"#16a34a", width:1.6, type:"dashed"}, silent:true,
+       endLabel:{show:true, formatter:"低估线", color:"#16a34a"}},
+      {type:"line", name:"高估线", data:dates.map(()=>c.upper2), symbol:"none",
+       lineStyle:{color:"#dc2626", width:1.6, type:"dashed"}, silent:true,
+       endLabel:{show:true, formatter:"高估线", color:"#dc2626"}},
+      line(c.lower1, "−1σ", "#94a3b8", true),
+      line(c.upper1, "+1σ", "#94a3b8", true),
+      line(c.avg, "均值", "#f59e0b", true),
+      ...(c.median != null ? [line(c.median, "中位", "#6366f1", true, 1)] : []),
+      {type:"scatter", name:"当前", data:[[dates[dates.length-1], c.current]],
+       symbolSize:9, itemStyle:{color:"#dc2626"}, z:10,
+       label:{show:true, formatter:() => c.current.toFixed(2), position:"right", color:"#dc2626"}},
+    ],
+  });
+}
+
+function renderKpis(r){
+  const c = r.channel;
+  const kpis = [
+    ["当前倍数", c.current.toFixed(2)],
+    ["历史分位", pctileText(c.pct)],
+    ["z 值 / 分区", `${c.z >= 0 ? "+" : ""}${c.z.toFixed(2)} · ${zoneText[c.zone]}`],
+    ["±2σ 覆盖率", pctText(c.coverage)],
+    ["min / 中位 / max", `${c.min.toFixed(2)} / ${c.median.toFixed(2)} / ${c.max.toFixed(2)}`],
+  ];
+  $("kpis").innerHTML = kpis.map(([k, v]) =>
+    `<div class="kpi"><div class="label">${k}</div><div class="value">${v}</div></div>`).join("");
+}
+
+function renderSafety(r){
+  const c = r.channel, s = r.safety || {};
+  const card = $("safety-card");
+  const highZone = c.z >= 1 || (c.pct != null && c.pct > 0.7);
+  card.className = "card " + (highZone ? "safety-warn" : "safety-ok");
+  let html = "";
+  if(highZone){
+    html += `<p class="red-note">当前处于历史高位区（z=${c.z.toFixed(2)}，${zoneText[c.zone]}）——
+      追高买入历史上伴随更深的回撤。</p>`;
+  } else {
+    html += `<p>当前位置：${zoneText[c.zone]}（z=${c.z.toFixed(2)}，分位 ${pctileText(c.pct)}）。</p>`;
+  }
+  const st = s.high_entry_drawdown;
+  if(st){
+    html += `<p>历史统计：过去 ${r.window} 内，在与当前相似或更高位置介入，
+      此后最大回撤<b>中位 ${pctText(st.median_mdd)}</b>、最差 <b class="red-note">${pctText(st.worst_mdd)}</b>
+      （样本 ${st.sample_n} 个交易日）。</p>`;
+  } else {
+    html += `<p class="meta">高位介入回撤统计：样本不足，暂缺。</p>`;
+  }
+  if(s.stop_reference != null){
+    html += `<p>窗口最低价（历史参考位）：<b>${s.stop_reference.toFixed(2)}</b> 元。</p>`;
+  }
+  $("safety-body").innerHTML = html;
+}
+
+function renderLevels(){
+  const L = state.levels;
+  if(!L){ $("levels-body").innerHTML = `<p class="meta">加载通道后展示。</p>`; return; }
+  const source = segVal("seg-source");
+  const buy = source === "user" && $("in-low").value
+    ? L.buy_price / L.low_multiple * parseFloat($("in-low").value) : L.buy_price;
+  const sell = source === "user" && $("in-high").value
+    ? L.sell_price / L.high_multiple * parseFloat($("in-high").value) : L.sell_price;
+  const dB = L.distance_to_buy_pct, dS = L.distance_to_sell_pct;
+  const bar = (d) => {
+    if(d == null) return "";
+    const w = Math.min(Math.abs(d) * 5 * 100 / 2, 50);
+    const dir = d >= 0 ? "left" : "right";
+    return `<div class="dist-row"><span>${d >= 0 ? "现价下方 " : "现价上方 "}${Math.abs(d*100).toFixed(1)}%</span>
+      <span class="dist-bar"><i style="${dir}:0;width:${w}%"></i></span></div>`;
+  };
+  $("levels-body").innerHTML = `
+    <p>来源：<b>${source === "user" ? "自填倍数" : "通道轨（估值数据）"}</b> ·
+      当前倍数 ${L.metric_current.toFixed(2)}</p>
+    <p>低买 <b>${L.low_multiple.toFixed(2)}</b> → 买入参考价
+      <b class="red-note" style="color:#16a34a">${buy ? buy.toFixed(2) : "—"}</b> 元
+      ${bar(dB)}</p>
+    <p>高卖 <b>${L.high_multiple.toFixed(2)}</b> → 卖出参考价
+      <b style="color:#dc2626">${sell ? sell.toFixed(2) : "—"}</b> 元
+      ${bar(dS)}</p>
+    <p class="meta">${L.assumption}</p>`;
+  state.levels._buy = buy; state.levels._sell = sell;
+}
+
+$("btn-bt").onclick = async () => {
+  if(!state.channel){ $("bt-note").textContent = "请先加载通道"; return; }
+  const buy = state.levels._buy, sell = state.levels._sell;
+  if(!buy || !sell){ $("bt-note").textContent = "买卖价位无效"; return; }
+  $("bt-note").textContent = "回拨中…";
+  const payload = {symbol: state.symbol, metric: state.metric, window: state.window,
+                   buy, sell};
+  const stop = parseFloat($("in-stop").value);
+  if(stop > 0) payload.stop = stop;
+  const r = await post("/api/bigly/backtest", payload);
+  if(r.error){ $("bt-note").textContent = r.error; return; }
+  $("bt-note").textContent = "";
+  renderResult(r);
+};
+
+function renderResult(r){
+  $("result-card").style.display = "block";
+  $("result-card").scrollIntoView({behavior:"smooth"});
+  const bt = r.backtest, cmp = r.compare || {};
+  const sw = cmp.swing || {}, hd = cmp.hold || {}, d = cmp.delta || {};
+  const fmtPct = v => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+  const winSwing = d.return_spread != null && d.return_spread >= 0;
+  const winHold = d.return_spread != null && d.return_spread < 0;
+  let stopRow = "";
+  if(bt.sell_reason === "stop"){
+    stopRow = `<tr><td>止损</td><td class="red-note">已触发（${bt.sell_date}）</td><td>—</td><td>—</td></tr>`;
+  }
+  $("result-body").innerHTML = `
+    <table class="cmp">
+      <tr><th>维度</th><th>波段（你的买卖点）</th><th>长持（同期一动不动）</th><th>差值</th></tr>
+      <tr><td>区间收益</td>
+        <td class="${winSwing ? "win" : ""}">${fmtPct(sw.return_pct)}</td>
+        <td class="${winHold ? "win" : ""}">${fmtPct(hd.return_pct)}</td>
+        <td>${d.return_spread != null ? fmtPct(d.return_spread) : "—"}</td></tr>
+      <tr><td>最大回撤</td>
+        <td>${fmtPct(sw.mdd)}</td><td>${fmtPct(hd.mdd)}</td>
+        <td>${d.mdd_spread != null ? fmtPct(d.mdd_spread) : "—"}</td></tr>
+      <tr><td>持仓天数</td>
+        <td>${sw.days_held != null ? sw.days_held : "—"}（空仓 ${pctText(sw.flat_ratio)}）</td>
+        <td>${hd.days || "—"} 天（100%）</td><td>—</td></tr>
+      <tr><td>触发</td>
+        <td>${bt.hit_buy ? `买入 ${bt.buy_date}` : "未触发买入"}</td>
+        <td>—</td><td>—</td></tr>
+      ${stopRow}
+    </table>
+    ${cmp.verdict ? `<p class="verdict">${cmp.verdict}</p>` : ""}
+    ${bt.no_stop_worst_drawdown != null
+      ? `<p class="red-note">未设止损：持有期最差浮亏曾达 ${fmtPct(bt.no_stop_worst_drawdown)}。</p>` : ""}
+    <p class="meta">事件：${(bt.events || []).map(e =>
+      `${e.type === "buy" ? "买入" : e.type === "sell" ? "止盈" : "止损"} ${e.date} @ ${e.price}`).join(" → ")
+      || "无触发"}</p>
+    <p class="meta">免责声明：本结果为统计描述与历史回放，不构成投资建议；买卖点由你自己设定与负责。</p>`;
+}
+
+(async () => {
+  try{
+    const meta = await (await fetch("/api/bigly/meta")).json();
+    if(meta.demo) $("demo-badge").textContent = "演示数据";
+    $("key-badge").textContent = meta.demo ? "" : "finpipe 实时数据";
+  }catch(e){ /* ignore */ }
+})();
+</script>
+</body>
+</html>

@@ -6,9 +6,9 @@ import io
 
 import pytest
 
-from bigwinner.export import HEADERS, xray_csv
-from bigwinner.fetchers import FakeFetcher
-from bigwinner.tools.dividend_xray import Position, analyze
+from bigwinner.common.export import HEADERS, xray_csv
+from bigwinner.common.fetchers import FakeFetcher
+from bigwinner.shouxi.tools.dividend_xray import Position, analyze
 
 
 def build_result():

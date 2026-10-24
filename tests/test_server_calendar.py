@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
-import bigwinner.server as srv
-from bigwinner.fetchers import FakeFetcher
-from bigwinner.store import Store
+import bigwinner.shouxi.server as srv
+from bigwinner.common.fetchers import FakeFetcher
+from bigwinner.common.store import Store
 
 
 @pytest.fixture(autouse=True)
@@ -99,7 +99,7 @@ def test_store_latest_position_set(tmp_path):
 
 
 def test_stock_screener_parses_screen_rows(monkeypatch):
-    from bigwinner import watchlist_sync
+    from bigwinner.common import watchlist_sync
 
     monkeypatch.setattr(watchlist_sync, "_run_skill",
                         lambda *args, **kwargs: {"data": {"result": {"rows": [{

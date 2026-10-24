@@ -7,7 +7,7 @@ from __future__ import annotations
 import time
 from typing import Any, Iterable, Sequence
 
-from bigwinner.tools.dividend_xray import Fetcher
+from bigwinner.shouxi.tools.dividend_xray import Fetcher
 
 
 def _digits(code: str) -> str:
@@ -811,7 +811,7 @@ def positions_from_payload(items: Iterable[dict[str, Any]]) -> list[Any]:
     Position.code 存 SDK/展示形式（hk.00700）；market、买入日、税率覆盖
     一并保留，供红利税与成本股息率使用。
     """
-    from bigwinner.tools.dividend_xray import Position  # 局部导入避免循环
+    from bigwinner.shouxi.tools.dividend_xray import Position  # 局部导入避免循环
 
     out: list[Position] = []
     for item in items:
