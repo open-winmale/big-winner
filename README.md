@@ -1,7 +1,7 @@
-# finpipe-tools
+# 收息佬（big-winner）
 
-> A 股 / 港股持仓收息、分红日历与记账 · **v1.0.0** ·
-> [GitHub](https://github.com/deadkingyy/finpipe-tools)
+> A 股 / 港股持仓收息、分红日历与记账 · **v1.1.0** ·
+> [GitHub](https://github.com/open-winmale/big-winner)
 >
 > 一组围绕 A 股 / 港股持仓与分红的小工具。每个工具一个独立网页，数据来自
 > [finpipe](https://github.com/open-winmale/finpipe)，只做事实与统计聚合。
@@ -31,15 +31,15 @@
 git clone https://github.com/open-winmale/finpipe.git && pip install -e ./finpipe
 
 # 2) 启动本工具（单端口，无其他依赖）
-cd finpipe-tools
-PYTHONPATH=src python -m fptools.server
+cd big-winner
+PYTHONPATH=src python -m bigwinner.server
 #   → http://127.0.0.1:8787
 ```
 
 **没有凭证也能先看效果**（内置样例数据，不联网）：
 
 ```bash
-PYTHONPATH=src python -m fptools.server --demo
+PYTHONPATH=src python -m bigwinner.server --demo
 ```
 
 配置自己的 AppID（内置体验额度是共享池，容易 429）：
@@ -196,7 +196,7 @@ export FINPIPE_CLIENT_SECRET=...
 ## 项目结构
 
 ```
-src/fptools/
+src/bigwinner/
   server.py                  # 单端口 HTTP 服务（仅标准库）
   fetchers.py                # FinpipeFetcher（CN/HK 双市场）/ CachedFetcher / FakeFetcher
   export.py                  # CSV 导出纯函数（含币种/CNY 折算列）
@@ -205,6 +205,7 @@ src/fptools/
   watchlist_sync.py          # winmale 关注分组同步 + 高股息选股池（wm-screen-index）
   tools/
     dividend_xray.py         # T1 纯计算层（不依赖 HTTP 与 finpipe）
+    dividend_quality.py      # 分红质量：支付能力评分 / 意愿档 / 硬旗标（A 股非金融）
     ledger.py                # 分红记账：税档 / 覆盖 / 年度汇总
     calendar.py              # 分红日历：事件解析 / 税后现金 / 年息与目标
   web/
@@ -213,6 +214,8 @@ src/fptools/
     assets/base.css, app.js
 tests/
   test_dividend_xray.py
+  test_dividend_quality.py
+  test_server_quality.py
   test_ledger.py
   test_fetchers.py
   test_export.py

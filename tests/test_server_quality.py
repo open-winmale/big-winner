@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-import fptools.server as srv
-from fptools.fetchers import FakeFetcher
+import bigwinner.server as srv
+from bigwinner.fetchers import FakeFetcher
 
 
 def quality_payload(**overrides):

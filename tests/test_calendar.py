@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from fptools.tools.calendar import build_calendar
+from bigwinner.tools.calendar import build_calendar
 
 TODAY = date(2026, 10, 23)
 

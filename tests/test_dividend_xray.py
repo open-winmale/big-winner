@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from fptools.fetchers import FakeFetcher
-from fptools.tools.dividend_xray import Position, analyze, consecutive_years
+from bigwinner.fetchers import FakeFetcher
+from bigwinner.tools.dividend_xray import Position, analyze, consecutive_years
 
 
 def make_fetcher() -> FakeFetcher:

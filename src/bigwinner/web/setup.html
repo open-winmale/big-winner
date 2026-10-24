@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>配置自己的 Key · finpipe-tools</title>
+<title>配置自己的 Key · 收息佬</title>
 <link rel="stylesheet" href="/assets/base.css">
 <style>
   .step { display: flex; gap: 16px; margin: 20px 0; }
@@ -39,7 +39,7 @@
 
 <header class="topbar">
   <div class="topbar-inner">
-    <span class="brand">finpipe<span class="dot">·</span>tools</span>
+    <span class="brand">收息佬</span>
     <span class="spacer"></span>
     <a href="/" style="font-size:13px">← 返回工具</a>
   </div>
@@ -79,15 +79,15 @@ FINPIPE_CLIENT_SECRET=你的api-key</pre>
       <div class="step-no">3</div>
       <div class="step-body">
         <h3>重启服务（去掉 --demo）</h3>
-        <pre class="block">cd finpipe-tools
-PYTHONPATH="src:../openwm/src" python -m fptools.server --port 8787</pre>
+        <pre class="block">cd big-winner
+PYTHONPATH=src python -m bigwinner.server --port 8787</pre>
         <p>页面右上角不再显示体验模式提示，即为你自己的 Key 在取数。</p>
       </div>
     </div>
 
     <div class="note">
       也可以不改文件、只用环境变量启动：
-      <code class="inline">FINPIPE_CLIENT_ID=... FINPIPE_CLIENT_SECRET=... python -m fptools.server</code>
+      <code class="inline">FINPIPE_CLIENT_ID=... FINPIPE_CLIENT_SECRET=... python -m bigwinner.server</code>
     </div>
   </section>
 

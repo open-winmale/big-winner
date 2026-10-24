@@ -1,12 +1,12 @@
 """单端口 Web 服务：每个小工具一个独立 HTML 页 + 一个 JSON 计算接口。
 
 启动：
-    PYTHONPATH=src python -m fptools.server              # 真实取数（需 finpipe）
-    PYTHONPATH=src python -m fptools.server --demo       # 内置样例数据，无需凭证
-    PYTHONPATH=src python -m fptools.server --port 8787
+    PYTHONPATH=src python -m bigwinner.server              # 真实取数（需 finpipe）
+    PYTHONPATH=src python -m bigwinner.server --demo       # 内置样例数据，无需凭证
+    PYTHONPATH=src python -m bigwinner.server --port 8787
 
 设计取舍：只用标准库 `http.server`，不引入 FastAPI/uvicorn —— 开源项目的
-使用门槛越低越好，`python -m fptools.server` 一条命令就能跑起来。
+使用门槛越低越好，`python -m bigwinner.server` 一条命令就能跑起来。
 """
 from __future__ import annotations
 
@@ -21,14 +21,14 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from fptools import fetchers
-from fptools.export import xray_csv
-from fptools.symbols import SymbolDirectory
-from fptools.store import Store
-from fptools.watchlist_sync import StockScreener, WatchlistSync
-from fptools.tools import dividend_xray as t1
-from fptools.tools import dividend_quality as dq
-from fptools.tools import ledger as ledger_mod
+from bigwinner import fetchers
+from bigwinner.export import xray_csv
+from bigwinner.symbols import SymbolDirectory
+from bigwinner.store import Store
+from bigwinner.watchlist_sync import StockScreener, WatchlistSync
+from bigwinner.tools import dividend_xray as t1
+from bigwinner.tools import dividend_quality as dq
+from bigwinner.tools import ledger as ledger_mod
 
 WEB_DIR = Path(__file__).parent / "web"
 
@@ -455,7 +455,7 @@ def run_ledger(payload: dict[str, Any]) -> dict[str, Any]:
 
 def run_calendar(payload: dict[str, Any]) -> dict[str, Any]:
     """分红日历：positions（我的持仓）/ codes（关注池）/ market（高股息池）。"""
-    from fptools.tools import calendar as cal_mod
+    from bigwinner.tools import calendar as cal_mod
 
     mode = str(payload.get("mode") or "positions").strip().lower()
     if mode not in ("positions", "codes", "market"):
@@ -732,7 +732,7 @@ def run_diagnose(payload: dict[str, Any]) -> dict[str, Any]:
 
     # 4) 未来分红事件（观察口径，shares=0）
     next_event = None
-    from fptools.tools import calendar as cal_mod
+    from bigwinner.tools import calendar as cal_mod
     try:
         cal = cal_mod.build_calendar(
             [{"code": item_code, "market": market, "shares": 0, "name": name}],
@@ -814,7 +814,7 @@ HANDLERS = {
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "fptools/1.0"
+    server_version = "bigwinner/1.1"
 
     # ---- 基础 ----
     def _send(self, status: int, body: bytes, content_type: str) -> None:
@@ -944,7 +944,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="finpipe-tools 单端口 Web 服务")
+    parser = argparse.ArgumentParser(description="收息佬（big-winner）单端口 Web 服务")
     parser.add_argument("--port", type=int, default=8787)
     parser.add_argument("--demo", action="store_true",
                         help="使用内置样例数据，无需 finpipe 凭证")
@@ -952,7 +952,7 @@ def main(argv: list[str] | None = None) -> int:
     RUNTIME.demo = args.demo
 
     host = "127.0.0.1"
-    print(f"\n  finpipe-tools  →  http://{host}:{args.port}")
+    print(f"\n  收息佬（big-winner）  →  http://{host}:{args.port}")
     print(f"  模式：{'demo（样例数据）' if args.demo else '真实取数（finpipe）'}")
     for slug, tool in TOOLS.items():
         print(f"   · {tool['title']:<12} http://{host}:{args.port}/tools/{slug}/")

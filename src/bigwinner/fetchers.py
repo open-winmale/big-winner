@@ -7,7 +7,7 @@ from __future__ import annotations
 import time
 from typing import Any, Iterable, Sequence
 
-from fptools.tools.dividend_xray import Fetcher
+from bigwinner.tools.dividend_xray import Fetcher
 
 
 def _digits(code: str) -> str:
@@ -92,8 +92,8 @@ class FinpipeFetcher:
                 import finpipe  # noqa: PLC0415 - 延迟导入，未安装也能启动服务
             except ImportError as exc:  # pragma: no cover
                 raise RuntimeError(
-                    "未安装 finpipe。请先：pip install -e /path/to/openwm，"
-                    "或从源码安装 wm-finpipe（非商业许可）。"
+                    "未安装 finpipe。请先：git clone https://github.com/open-winmale/finpipe，"
+                    "再 pip install -e ./finpipe（非商业许可）。"
                 ) from exc
             client = finpipe.Client.from_env()
         self.cli = client
@@ -811,7 +811,7 @@ def positions_from_payload(items: Iterable[dict[str, Any]]) -> list[Any]:
     Position.code 存 SDK/展示形式（hk.00700）；market、买入日、税率覆盖
     一并保留，供红利税与成本股息率使用。
     """
-    from fptools.tools.dividend_xray import Position  # 局部导入避免循环
+    from bigwinner.tools.dividend_xray import Position  # 局部导入避免循环
 
     out: list[Position] = []
     for item in items:

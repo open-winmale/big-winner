@@ -6,9 +6,9 @@ import io
 
 import pytest
 
-from fptools.export import HEADERS, xray_csv
-from fptools.fetchers import FakeFetcher
-from fptools.tools.dividend_xray import Position, analyze
+from bigwinner.export import HEADERS, xray_csv
+from bigwinner.fetchers import FakeFetcher
+from bigwinner.tools.dividend_xray import Position, analyze
 
 
 def build_result():

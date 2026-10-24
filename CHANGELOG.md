@@ -1,9 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-10-24
 
 ### Changed
 
+- 项目更名：仓库 open-winmale/big-winner，Python 包 `bigwinner`，产品品牌「收息佬」；
+  运行命令改为 `python -m bigwinner.server`。上游数据依赖 finpipe 与
+  `FINPIPE_CLIENT_ID` / `FINPIPE_CLIENT_SECRET` 凭证约定不变；
+  本地数据文件 `data/fptools.db` 保持兼容。
 - 工具更名「收息佬」（原「持仓收息透视表」）。
 - **收息驾驶舱简化**：删除日历内 KPI 卡片行、年息目标进度条与口径说明列表，
   日历只保留事件列表；税后测算收敛到「记账」。
@@ -13,8 +17,6 @@
   开箱即有日历与分析内容。
 - **分析按钮**：改为胶囊形设计按钮（脉搏图标 + 「分析」），三处入口统一；
   移动端适配优化。
-
-## 1.1.0 — 2026-10-23
 
 ### Added
 

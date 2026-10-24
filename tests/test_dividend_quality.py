@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from fptools.tools.dividend_quality import (
+from bigwinner.tools.dividend_quality import (
     dividend_continuity,
     evaluate,
     payout_stats,
