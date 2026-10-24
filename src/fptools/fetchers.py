@@ -358,6 +358,124 @@ class FinpipeFetcher:
         self._fx_cache["HKD"] = _num(rate)
         return self._fx_cache["HKD"]
 
+    def quality_metrics(self, code: str) -> dict[str, Any]:
+        """分红质量指标包：标量指标 + 年度分红率/分红金额/股息率序列。
+
+        一次自定义 eval（每票 1 次 HTTP）。code 必须在目录里；序列通过
+        `RANGE(ITER(...))` 取年度点。失败时返回 {}，由上层显式标注缺失。
+        """
+        cli = self._cli_for(code)
+        if cli is None or _market(code) != "cn":
+            return {}
+        bare = _query_code(code)
+        xs = (
+            "return {"
+            '"scalars": {'
+            '"payout_ttm": $BONUS_TTM_RATE_LAST,'
+            '"payout_lyr": $BONUS_LYR_RATE_LAST,'
+            '"payout_3y_avg": $BONUS_RATE_3Y_AVG_LAST,'
+            '"payout_5y_avg": $BONUS_RATE_5Y_AVG_LAST,'
+            '"payout_3y_min": $BONUS_RATE_3Y_MIN_LAST,'
+            '"payout_5y_min": $BONUS_RATE_5Y_MIN_LAST,'
+            '"bonus_trend": $BONUS_3Y_TREND_LAST,'
+            '"yield_ttm": $BONUS_RATE_TTM_LAST,'
+            '"ncfo_ttm": $NCFO_TTM_LAST,'
+            '"fcf_ttm": $FCF_TTM,'
+            '"cf_np": $CF_NP_RATIO_LAST,'
+            '"ncfo_3y_min": $NCFO_3Y_MIN_LAST,'
+            '"cfo_kind": $CF_KIND_CODE_3Y_LAST,'
+            '"npts_ttm": $NPTS_TTM_LAST,'
+            '"npts_yoy": $NPTS_TTM_YOY_LAST,'
+            '"roe": $ROE_TTM_LAST,'
+            '"roic": $ROIC_TTM_LAST,'
+            '"tl_rate": $TL_RATE_LAST,'
+            '"ibd_rate": $IBD_RATE_LAST,'
+            '"quick": $QUICK_RATIO_LAST,'
+            '"ld": $LD,'
+            '"setl": $SETL,'
+            '"org_type": $ORG_ORGTYPE,'
+            '"org_form": $ORG_FORM_TAG,'
+            '"free_holder_sum": $FREE_HOLDER_SUM_RATIO_LAST,'
+            '"exec_hold": $EXECUTIVE_HOLD_RATIO_LAST,'
+            '"has_buyback": $HAS_BUYBACK_6M,'
+            '"ind_tl_3y_avg": $CUR_IND_TL_RATE_3Y_AVG_LAST,'
+            '"ind_roe_3y_avg": $CUR_IND_ROE_3Y_AVG_LAST,'
+            '"ind_yield_3y_avg": $CUR_IND_BONUS_RATE_3Y_AVG_LAST'
+            "},"
+            '"payout_lyr_series": RANGE(ITER($BONUS_LYR_RATE, annual)),'
+            '"bonus_series": RANGE(ITER($BONUS_TTM, annual)),'
+            '"yield_series": RANGE(ITER($BONUS_RATE_TTM, annual))'
+            "}"
+        )
+        try:
+            data = cli.eval_result(xs, symbol=bare)
+        except Exception:  # noqa: BLE001 - 单票质量取数失败 → 上层显式缺失
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        scalars = data.get("scalars") if isinstance(data.get("scalars"), dict) else {}
+
+        def _pair_list(value: Any) -> list[dict[str, Any]]:
+            """年度序列归一：[[v, year], ...] / [{...}] → [{year, value}]。"""
+            out: list[dict[str, Any]] = []
+            if not isinstance(value, list):
+                return out
+            for item in value:
+                if isinstance(item, (list, tuple)) and len(item) >= 2:
+                    out.append({"value": _num(item[0]),
+                                "year": int(item[1]) if item[1] else None})
+                elif isinstance(item, dict):
+                    v = item.get("value", item.get("v"))
+                    y = item.get("year", item.get("annual", item.get("y")))
+                    out.append({"value": _num(v),
+                                "year": int(y) if y else None})
+            return out
+
+        return {
+            **{k: (_num(v) if not isinstance(v, (str, bool)) else v)
+               for k, v in scalars.items()},
+            "payout_lyr_series": _pair_list(data.get("payout_lyr_series")),
+            "bonus_series": _pair_list(data.get("bonus_series")),
+            "yield_series": _pair_list(data.get("yield_series")),
+        }
+
+    def profile_metrics(self, code: str) -> dict[str, Any]:
+        """公司档案：名称/行业/企业性质/企业类型/上市日期（CN/HK 都可用）。
+
+        `$ORG_FORM_TAG`（央企子公司/地方国有企业/大型民企等）仅 A 股有值，
+        港股返回 null；不在 SDK 目录里，必须走 eval。
+        """
+        cli = self._cli_for(code)
+        if cli is None:
+            return {}
+        market = _market(code)
+        if market not in ("cn", "hk"):
+            return {}
+        xs = (
+            'return {'
+            '"name": $NAME,'
+            '"industry": $ORG_INDUSTRY_NAME,'
+            '"org_type": $ORG_ORGTYPE,'
+            '"org_form": $ORG_FORM_TAG,'
+            '"listing_date": $ORG_LISTINGDATE'
+            "}"
+        )
+        try:
+            data = cli.eval_result(xs, symbol=_query_code(code))
+        except Exception:  # noqa: BLE001 - 档案失败 → 上层显式缺失
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        org_type = data.get("org_type")
+        return {
+            "name": str(data.get("name")) if data.get("name") else None,
+            "industry": str(data.get("industry")) if data.get("industry") else None,
+            "org_type": int(org_type) if org_type is not None else None,
+            "org_form": str(data.get("org_form")) if data.get("org_form") else None,
+            "listing_date": str(data.get("listing_date"))[:10]
+                if data.get("listing_date") else None,
+        }
+
 
 
 class CachedFetcher:
@@ -429,6 +547,20 @@ class CachedFetcher:
 
         return self._memo(("fx", ccy), produce)
 
+    def quality_metrics(self, code: str) -> dict[str, Any]:
+        def produce() -> dict[str, Any]:
+            fn = getattr(self.inner, "quality_metrics", None)
+            return fn(code) if fn is not None else {}
+
+        return self._memo(("quality", code), produce)
+
+    def profile_metrics(self, code: str) -> dict[str, Any]:
+        def produce() -> dict[str, Any]:
+            fn = getattr(self.inner, "profile_metrics", None)
+            return fn(code) if fn is not None else {}
+
+        return self._memo(("profile", code), produce)
+
 
 class FakeFetcher:
     """离线测试/demo 用。
@@ -452,6 +584,8 @@ class FakeFetcher:
         pct10y: dict[str, float] | None = None,
         history: dict[str, list[dict[str, Any]]] | None = None,
         fx: dict[str, float] | None = None,
+        quality: dict[str, dict[str, Any]] | None = None,
+        names: dict[str, str] | None = None,
         synthetic: bool = False,
     ) -> None:
         self.synthetic = synthetic
@@ -462,6 +596,8 @@ class FakeFetcher:
         self.eps = eps or {}
         self.pct10y = pct10y or {}
         self.history_data = history or {}
+        self.quality_data = quality or {}
+        self.names = names or {}
         # demo/测试的默认汇率：1 HKD ≈ 0.85 CNY
         self.fx = fx if fx is not None else {"HKD": 0.85}
 
@@ -490,17 +626,16 @@ class FakeFetcher:
         return {c: self.prices_data.get(c) for c in codes}
 
     def dividend_snapshot(self, codes: Sequence[str]) -> dict[str, dict[str, float | None]]:
-        if self.synthetic:
-            return {c: ({"yield_ttm": self.yields.get(c),
-                         "payout_ttm": self.payouts.get(c)}
-                        if c in self.yields else
-                        {"yield_ttm": self._synthetic(c)["yield"],
-                         "payout_ttm": self._synthetic(c)["payout"]})
-                    for c in codes}
-        return {
-            c: {"yield_ttm": self.yields.get(c), "payout_ttm": self.payouts.get(c)}
-            for c in codes
-        }
+        def snap(c: str) -> dict[str, float | None]:
+            yield_ttm = self.yields.get(c)
+            payout_ttm = self.payouts.get(c)
+            if self.synthetic and yield_ttm is None:
+                syn = self._synthetic(c)
+                yield_ttm = syn["yield"]
+                payout_ttm = self.payouts.get(c, syn["payout"])
+            return {"yield_ttm": yield_ttm, "payout_ttm": payout_ttm}
+
+        return {c: snap(c) for c in codes}
 
     def metric(self, code: str, metric_code: str) -> float | None:
         if metric_code.endswith("DPS_TTM_LAST_REAL"):
@@ -538,6 +673,96 @@ class FakeFetcher:
     def dividend_rows_many(self, codes: Sequence[str],
                            limit: int = 20) -> dict[str, list[dict[str, Any]]]:
         return {c: self.dividend_rows(c, limit) for c in codes}
+
+    def quality_metrics(self, code: str) -> dict[str, Any]:
+        """demo/测试的质量指标：显式 quality 表优先，否则合成确定性数据。"""
+        if _market(code) != "cn":
+            return {}
+        fixed = self.quality_data.get(code)
+        if fixed is not None:
+            return fixed
+        if not self.synthetic:
+            return {}
+        payout = self.payouts.get(code) or self._synthetic(code)["payout"]
+        eps_ttm = self.eps.get(code) or self._synthetic(code)["eps"]
+        npts = eps_ttm * 100_000_000        # 假设 1 亿股 → TTM 净利润
+        ncfo = npts * 1.05                  # 现金转化 1.05
+        fcf = ncfo * 0.8
+        s = self._seed(code)
+        org_type = 2 if code in ("601398", "601318", "601166", "600028") else 1
+        if org_type == 2:
+            fcf = None
+        series = [
+            {"year": y, "value": round(payout * (1 + ((y % 3) - 1) * 0.05), 4)}
+            for y in range(2025, 2019, -1)
+        ]
+        return {
+            "payout_ttm": payout,
+            "payout_lyr": payout,
+            "payout_3y_avg": round(payout * 0.98, 4),
+            "payout_5y_avg": round(payout * 0.95, 4),
+            "payout_3y_min": round(payout * 0.85, 4),
+            "payout_5y_min": round(payout * 0.8, 4),
+            "bonus_trend": "up" if s % 2 == 0 else "flat",
+            "yield_ttm": self.yields.get(code),
+            "ncfo_ttm": ncfo,
+            "fcf_ttm": fcf,
+            "cf_np": 1.05,
+            "ncfo_3y_min": ncfo * 0.85,
+            "cfo_kind": 1,
+            "npts_ttm": npts,
+            "npts_yoy": 0.06,
+            "roe": 0.12,
+            "roic": 0.10,
+            "tl_rate": 0.35 if org_type == 1 else 0.92,
+            "ibd_rate": 0.15 if org_type == 1 else 0.0,
+            "quick": 1.2 if org_type == 1 else None,
+            "ld": 1.5 if org_type == 1 else None,
+            "setl": -(npts * 0.3) if org_type == 1 else None,
+            "org_type": org_type,
+            "org_form": ("中央金融企业" if org_type == 2
+                         else ("大型民企" if s % 3 == 0 else "地方国有企业")),
+            "free_holder_sum": 0.45,
+            "exec_hold": 0.01,
+            "has_buyback": s % 3 == 0,
+            "ind_tl_3y_avg": 0.42,
+            "ind_roe_3y_avg": 0.10,
+            "ind_yield_3y_avg": 0.035,
+            "payout_lyr_series": series,
+            "bonus_series": [
+                {"year": it["year"], "value": round(npts * it["value"], 0)}
+                for it in series
+            ],
+            "yield_series": [
+                {"year": it["year"],
+                 "value": round((self.yields.get(code) or 0.03) * (1 + (2025 - it["year"]) * 0.02), 4)}
+                for it in series
+            ],
+        }
+
+    def profile_metrics(self, code: str) -> dict[str, Any]:
+        """demo/测试的档案：名称取 quality 显式表或合成，org_form 仅 CN。"""
+        market = _market(code)
+        if market not in ("cn", "hk"):
+            return {}
+        q = self.quality_data.get(code)
+        if q is not None:
+            org_type = q.get("org_type")
+            org_form = q.get("org_form")
+        elif self.synthetic and market == "cn":
+            s = self._seed(code)
+            org_type = 2 if code in ("601398", "601318", "601166", "600028") else 1
+            org_form = ("中央金融企业" if org_type == 2
+                        else ("大型民企" if s % 3 == 0 else "地方国有企业"))
+        else:
+            org_type = org_form = None
+        return {
+            "name": self.names.get(code),
+            "industry": None,
+            "org_type": org_type,
+            "org_form": org_form if market == "cn" else None,
+            "listing_date": None,
+        }
 
     def high_yield_symbols(self, market: str = "cn",
                            limit: int = 120) -> list[dict[str, Any]]:

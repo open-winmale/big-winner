@@ -27,6 +27,7 @@ from fptools.symbols import SymbolDirectory
 from fptools.store import Store
 from fptools.watchlist_sync import StockScreener, WatchlistSync
 from fptools.tools import dividend_xray as t1
+from fptools.tools import dividend_quality as dq
 from fptools.tools import ledger as ledger_mod
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -34,8 +35,8 @@ WEB_DIR = Path(__file__).parent / "web"
 #: 工具注册表：新增工具只需在这里加一条 + 一个 HTML + 一个 handler
 TOOLS: dict[str, dict[str, str]] = {
     "dividend-xray": {
-        "title": "持仓收息透视表",
-        "tagline": "输入持仓，一键看清组合的总利润、总股息与派息稳定性",
+        "title": "收息佬",
+        "tagline": "攒股收息驾驶舱：分红日历 · 持续性分析 · 税后记账",
         "page": "dividend_xray.html",
     },
 }
@@ -105,47 +106,110 @@ def _demo_data() -> dict[str, Any]:
              "600036", "601318", "000651", "600887", "601899",
              "600489", "000333", "600276", "601888", "000001",
              "601166", "600028", "601728", "600941", "601668"]
+
+    prices = {
+        "600900": 28.10, "601088": 41.20, "600519": 1420.0, "601398": 6.85,
+        "000858": 118.40, "600036": 45.60, "601318": 52.30, "000651": 41.80,
+        "600887": 27.50, "601899": 21.40, "600489": 13.20, "000333": 74.20,
+        "600276": 46.90, "601888": 61.50, "000001": 11.60, "601166": 22.10,
+        "600028": 6.20, "601728": 7.40, "600941": 108.50, "601668": 5.90,
+        "hk.00700": 382.40,
+    }
+    yields = {
+        "600900": 0.0338, "601088": 0.0521, "600519": 0.0396, "601398": 0.0512,
+        "000858": 0.0461, "600036": 0.0482, "601318": 0.0345, "000651": 0.0564,
+        "600887": 0.0412, "601899": 0.0321, "600489": 0.0448, "000333": 0.0487,
+        "600276": 0.0298, "601888": 0.0215, "000001": 0.0532, "601166": 0.0495,
+        "600028": 0.0552, "601728": 0.0428, "600941": 0.0465, "601668": 0.0488,
+        "hk.00700": 0.01373,
+    }
+    payouts = {
+        "600900": 0.710, "601088": 0.728, "600519": 0.799, "601398": 0.310,
+        "000858": 0.650, "600036": 0.352, "601318": 0.285, "000651": 0.722,
+        "600887": 0.705, "601899": 0.446, "600489": 0.630, "000333": 0.445,
+        "600276": 0.510, "601888": 0.518, "000001": 0.285, "601166": 0.310,
+        "600028": 0.680, "601728": 0.435, "600941": 0.730, "601668": 0.288,
+        "hk.00700": 0.2052,
+    }
+    dps = {
+        "600900": 0.95, "601088": 2.15, "600519": 56.2, "601398": 0.35,
+        "000858": 5.46, "600036": 2.20, "601318": 1.80, "000651": 2.36,
+        "600887": 1.13, "601899": 0.69, "600489": 0.59, "000333": 3.50,
+        "600276": 1.40, "601888": 1.32, "000001": 0.62, "601166": 1.09,
+        "600028": 0.34, "601728": 0.32, "600941": 5.05, "601668": 0.29,
+        "hk.00700": 5.30,
+    }
+    eps = {
+        "600900": 1.32, "601088": 2.95, "600519": 70.3, "601398": 1.05,
+        "000858": 8.40, "600036": 5.85, "601318": 5.90, "000651": 3.10,
+        "600887": 1.62, "601899": 1.50, "600489": 0.89, "000333": 7.60,
+        "600276": 2.72, "601888": 2.42, "000001": 2.15, "601166": 3.45,
+        "600028": 0.50, "601728": 0.72, "600941": 6.85, "601668": 1.00,
+    }
+
+    def _demo_quality(code: str) -> dict[str, Any]:
+        """demo 质量指标：与 payouts/eps 同口径，金融股模拟 FCF 缺失。"""
+        payout = payouts.get(code) or 0.5
+        eps_ttm = eps.get(code) or 1.0
+        financial = code in ("601398", "601318", "601166", "000001")
+        npts = eps_ttm * 1.0e9
+        ncfo = npts * (1.05 if not financial else 1.6)
+        fcf = None if financial else ncfo * 0.8
+        series = [{"year": y, "value": round(payout * (1 + (2025 - y) * 0.02), 4)}
+                  for y in range(2025, 2019, -1)]
+        return {
+            "payout_ttm": payout, "payout_lyr": payout,
+            "payout_3y_avg": round(payout * 0.97, 4),
+            "payout_5y_avg": round(payout * 0.94, 4),
+            "payout_3y_min": round(payout * 0.9, 4),
+            "payout_5y_min": round(payout * 0.85, 4),
+            "payout_trend": "flat",
+            "yield_ttm": yields.get(code),
+            "ncfo_ttm": ncfo, "fcf_ttm": fcf,
+            "cf_np": 1.05, "ncfo_3y_min": ncfo * 0.9, "cfo_kind": 1,
+            "npts_ttm": npts, "npts_yoy": 0.06,
+            "roe": 0.12, "roic": 0.10,
+            "tl_rate": 0.92 if financial else 0.35,
+            "ibd_rate": 0.0 if financial else 0.13,
+            "quick": None if financial else 1.2,
+            "ld": None if financial else 1.5,
+            "setl": None if financial else -(npts * 0.3),
+            "org_type": 2 if financial else 1,
+            "org_form": ("中央金融企业" if financial
+                         else ("大型民企" if code in ("000858", "000651")
+                               else "地方国有企业")),
+            "free_holder_sum": 0.48, "exec_hold": 0.008,
+            "has_buyback": code in ("600519", "000333"),
+            "ind_tl_3y_avg": 0.44, "ind_roe_3y_avg": 0.10,
+            "ind_yield_3y_avg": 0.035,
+            "payout_lyr_series": series,
+            "bonus_series": [{"year": s["year"], "value": npts * s["value"]}
+                             for s in series],
+            "yield_series": [{"year": s["year"],
+                              "value": (yields.get(code) or 0.03) * (1 + (2025 - s["year"]) * 0.02)}
+                             for s in series],
+        }
+
+    quality = {c: _demo_quality(c) for c in codes}
+
+    names = {
+        "600900": "长江电力", "601088": "中国神华", "600519": "贵州茅台",
+        "601398": "工商银行", "000858": "五粮液", "600036": "招商银行",
+        "601318": "中国平安", "000651": "格力电器", "600887": "伊利股份",
+        "601899": "紫金矿业", "600489": "中金黄金", "000333": "美的集团",
+        "600276": "恒瑞医药", "601888": "中国中免", "000001": "平安银行",
+        "601166": "兴业银行", "600028": "中国石化", "601728": "中国电信",
+        "600941": "中国移动", "601668": "中国建筑", "hk.00700": "腾讯控股",
+    }
+
     return {
-        "prices": {
-            "600900": 28.10, "601088": 41.20, "600519": 1420.0, "601398": 6.85,
-            "000858": 118.40, "600036": 45.60, "601318": 52.30, "000651": 41.80,
-            "600887": 27.50, "601899": 21.40, "600489": 13.20, "000333": 74.20,
-            "600276": 46.90, "601888": 61.50, "000001": 11.60, "601166": 22.10,
-            "600028": 6.20, "601728": 7.40, "600941": 108.50, "601668": 5.90,
-            "hk.00700": 382.40,
-        },
-        "yields": {
-            "600900": 0.0338, "601088": 0.0521, "600519": 0.0396, "601398": 0.0512,
-            "000858": 0.0461, "600036": 0.0482, "601318": 0.0345, "000651": 0.0564,
-            "600887": 0.0412, "601899": 0.0321, "600489": 0.0448, "000333": 0.0487,
-            "600276": 0.0298, "601888": 0.0215, "000001": 0.0532, "601166": 0.0495,
-            "600028": 0.0552, "601728": 0.0428, "600941": 0.0465, "601668": 0.0488,
-            "hk.00700": 0.01373,
-        },
-        "payouts": {
-            "600900": 0.710, "601088": 0.728, "600519": 0.799, "601398": 0.310,
-            "000858": 0.650, "600036": 0.352, "601318": 0.285, "000651": 0.722,
-            "600887": 0.705, "601899": 0.446, "600489": 0.630, "000333": 0.445,
-            "600276": 0.510, "601888": 0.518, "000001": 0.285, "601166": 0.310,
-            "600028": 0.680, "601728": 0.435, "600941": 0.730, "601668": 0.288,
-            "hk.00700": 0.2052,
-        },
-        "dps": {
-            "600900": 0.95, "601088": 2.15, "600519": 56.2, "601398": 0.35,
-            "000858": 5.46, "600036": 2.20, "601318": 1.80, "000651": 2.36,
-            "600887": 1.13, "601899": 0.69, "600489": 0.59, "000333": 3.50,
-            "600276": 1.40, "601888": 1.32, "000001": 0.62, "601166": 1.09,
-            "600028": 0.34, "601728": 0.32, "600941": 5.05, "601668": 0.29,
-            "hk.00700": 5.30,
-        },
-        "eps": {
-            "600900": 1.32, "601088": 2.95, "600519": 70.3, "601398": 1.05,
-            "000858": 8.40, "600036": 5.85, "601318": 5.90, "000651": 3.10,
-            "600887": 1.62, "601899": 1.50, "600489": 0.89, "000333": 7.60,
-            "600276": 2.72, "601888": 2.42, "000001": 2.15, "601166": 3.45,
-            "600028": 0.50, "601728": 0.72, "600941": 6.85, "601668": 1.00,
-            "hk.00700": 25.902,
-        },
+        "prices": prices,
+        "yields": yields,
+        "payouts": payouts,
+        "dps": dps,
+        "eps": {**eps, "hk.00700": 25.902},
+        "quality": quality,
+        "names": names,
         "pct10y": {
             "600900": 0.42, "601088": 0.61, "600519": 0.28, "601398": 0.77,
             "000858": 0.55, "600036": 0.72, "601318": 0.38, "000651": 0.83,
@@ -197,6 +261,25 @@ def _demo_data() -> dict[str, Any]:
 # ---------------------------------------------------------------- 业务 handler
 
 
+def _fill_names(fetcher: Any, positions: list[Any]) -> None:
+    """名称缺失的持仓直接查 profile（$NAME 不会有缺失）。
+
+    只对没有名字的票逐票调用，已命名的跳过；单票失败不影响其余。
+    """
+    for p in positions:
+        if p.name:
+            continue
+        fn = getattr(fetcher, "profile_metrics", None)
+        if fn is None:
+            return
+        try:
+            profile = fn(p.normalized_code()) or {}
+        except Exception:  # noqa: BLE001 - 单票失败不影响其余
+            continue
+        if profile.get("name"):
+            p.name = str(profile["name"])
+
+
 def run_dividend_xray(payload: dict[str, Any]) -> dict[str, Any]:
     items = payload.get("positions") or []
     if not items:
@@ -207,6 +290,7 @@ def run_dividend_xray(payload: dict[str, Any]) -> dict[str, Any]:
     positions = fetchers.positions_from_payload(items)
     if not positions:
         raise ToolError("没有识别到有效持仓行（代码非空、股数为正整数）")
+    _fill_names(RUNTIME.fetcher(), positions)
 
     deep = bool(payload.get("deep"))
     result = t1.analyze(positions, RUNTIME.fetcher(), deep=deep)
@@ -441,6 +525,7 @@ def run_calendar(payload: dict[str, Any]) -> dict[str, Any]:
         positions = fetchers.positions_from_payload(payload.get("positions") or [])
         if not positions:
             raise ToolError("没有识别到有效持仓行（代码非空、股数为正整数）")
+        _fill_names(fetcher, positions)
         items = [
             {
                 "code": p.normalized_code(),
@@ -512,6 +597,170 @@ def watchlist_groups(_: dict[str, Any]) -> dict[str, Any]:
         raise ToolError(f"读取关注分组失败：{exc}") from exc
 
 
+def run_dividend_quality(payload: dict[str, Any]) -> dict[str, Any]:
+    """分红质量：A 股非金融评分；金融股/港股只展示指标并说明原因。"""
+    positions = fetchers.positions_from_payload(payload.get("positions") or [])
+    if not positions:
+        raise ToolError("请先添加持仓")
+    if len(positions) > t1.MAX_POSITIONS:
+        raise ToolError(f"单次最多 {t1.MAX_POSITIONS} 个标的，当前 {len(positions)} 个")
+
+    fetcher = RUNTIME.fetcher()
+    _fill_names(fetcher, positions)
+    items: list[dict[str, Any]] = []
+    for p in positions:
+        code = p.normalized_code()
+        items.append({
+            "code": code,
+            "market": p.inferred_market(),
+            "name": p.name,
+        })
+
+    # 原始分红历史（连续性/特别分红），按市场批量
+    hist_by_code: dict[str, list[dict[str, Any]]] = {}
+    many = getattr(fetcher, "dividend_rows_many", None)
+    if many is not None:
+        try:
+            hist_by_code = many([it["code"] for it in items], limit=80) or {}
+        except Exception:  # noqa: BLE001 - 历史失败不阻塞主分析
+            hist_by_code = {}
+    for it in items:
+        hist_by_code.setdefault(it["code"], [])
+
+    metrics_by_code: dict[str, dict[str, Any]] = {}
+    for it in items:
+        code = it["code"]
+        if it["market"] != "cn":
+            continue  # 港股：eligible=false，无需取质量指标
+        try:
+            fn = getattr(fetcher, "quality_metrics", None)
+            metrics_by_code[code] = fn(code) if fn is not None else {}
+        except Exception:  # noqa: BLE001 - 单票失败隔离
+            metrics_by_code[code] = {}
+
+    data = dq.build_quality(items, metrics_by_code, hist_by_code)
+    rows_out = []
+    for row in data["rows"]:
+        item = {
+            k: v for k, v in row.__dict__.items()
+            if k not in ("recurring_by_year", "specials", "ability_bands")
+        }
+        item["recurring_by_year"] = row.recurring_by_year
+        item["specials"] = row.specials
+        item["ability_bands"] = row.ability_bands
+        rows_out.append(item)
+    out = {
+        "rows": rows_out,
+        "summary": data["summary"],
+        "notes": data["notes"],
+        "disclaimer": DISCLAIMER,
+        "demo": RUNTIME.demo,
+    }
+    return out
+
+
+def run_diagnose(payload: dict[str, Any]) -> dict[str, Any]:
+    """单票诊股：档案（含企业类型）+ 行情股息 + 分红质量 + 未来分红事件。
+
+    按需使用，不依赖持仓；shares=0 观察口径，无个人现金。
+    任一区块失败不阻塞其他区块，缺失显式标注。
+    """
+    raw = str(payload.get("code") or "").strip()
+    if not raw:
+        raise ToolError("请输入股票代码（A 股 6 位 / 港股 5 位）")
+    item_code = fetchers.sdk_symbol({"code": raw})
+    if not item_code or not "".join(ch for ch in item_code if ch.isdigit()):
+        raise ToolError("代码格式不正确：A 股 6 位数字 / 港股 5 位数字")
+    market = "hk" if item_code.startswith("hk.") else "cn"
+    name_hint = str(payload.get("name") or "").strip() or None
+
+    fetcher = RUNTIME.fetcher()
+    notes: list[str] = []
+
+    # 1) 档案（含企业类型；CN/HK 都可用，org_form 仅 CN）
+    profile: dict[str, Any] = {}
+    fn = getattr(fetcher, "profile_metrics", None)
+    if fn is not None:
+        try:
+            profile = fn(item_code) or {}
+        except Exception as exc:  # noqa: BLE001
+            notes.append(f"档案取数失败：{type(exc).__name__}")
+    name = profile.get("name") or name_hint or item_code
+    profile.setdefault("name", name)
+
+    # 2) 行情与股息快照（快照也带名称，档案失败时兜底）
+    quote: dict[str, Any] = {"currency": "HKD" if market == "hk" else "CNY"}
+    try:
+        prices = fetcher.prices([item_code]) or {}
+        quote["price"] = prices.get(item_code)
+    except Exception:  # noqa: BLE001
+        quote["price"] = None
+        notes.append("现价取数失败")
+    try:
+        snap = (fetcher.dividend_snapshot([item_code]) or {}).get(item_code) or {}
+        quote["yield_ttm"] = snap.get("yield_ttm")
+        quote["payout_ttm"] = snap.get("payout_ttm")
+        if quote["yield_ttm"] == 0 and quote["payout_ttm"] == 0 and market == "cn":
+            notes.append("股息快照为 0，可能无分红记录或数据缺失")
+    except Exception:  # noqa: BLE001
+        quote["yield_ttm"] = quote["payout_ttm"] = None
+        notes.append("股息快照取数失败")
+
+    # 3) 分红质量（复用 evaluate；金融/港股自动不评分）
+    hist_rows: list[dict[str, Any]] = []
+    try:
+        hist_rows = fetcher.dividend_rows(item_code, limit=80) or []
+    except Exception:  # noqa: BLE001
+        notes.append("分红历史取数失败")
+    metrics: dict[str, Any] = {}
+    if market == "cn":
+        try:
+            qfn = getattr(fetcher, "quality_metrics", None)
+            metrics = qfn(item_code) if qfn is not None else {}
+        except Exception:  # noqa: BLE001
+            metrics = {}
+    quality_row = dq.evaluate(item_code, name, market, metrics, hist_rows)
+    if quote.get("yield_ttm") is not None and quality_row.yield_ttm is None:
+        quality_row.yield_ttm = quote["yield_ttm"]
+    quality_out = {
+        k: v for k, v in quality_row.__dict__.items()
+        if k not in ("recurring_by_year", "specials", "ability_bands")
+    }
+    quality_out["recurring_by_year"] = quality_row.recurring_by_year
+    quality_out["specials"] = quality_row.specials
+    quality_out["ability_bands"] = quality_row.ability_bands
+
+    # 4) 未来分红事件（观察口径，shares=0）
+    next_event = None
+    from fptools.tools import calendar as cal_mod
+    try:
+        cal = cal_mod.build_calendar(
+            [{"code": item_code, "market": market, "shares": 0, "name": name}],
+            {item_code: hist_rows}, fx={"CNY": 1.0})
+        upcoming = [e for e in cal.get("events", [])
+                    if e.get("stage") in ("待除权", "已除权待到账", "预案待定")]
+        next_event = upcoming[0] if upcoming else None
+        if not upcoming:
+            notes.append("暂无已公告的未来分红事件")
+    except Exception:  # noqa: BLE001
+        notes.append("分红日历取数失败")
+
+    if market == "hk" and not profile.get("org_form"):
+        notes.append("企业类型仅 A 股提供，港股暂无该标签")
+
+    return {
+        "code": item_code,
+        "market": market,
+        "profile": profile,
+        "quote": quote,
+        "quality": quality_out,
+        "next_event": next_event,
+        "notes": notes,
+        "disclaimer": DISCLAIMER,
+        "demo": RUNTIME.demo,
+    }
+
+
 def key_status(_: dict[str, Any]) -> dict[str, Any]:
     """当前凭证状态：是否用着自己的 Key（只回布尔与来源，绝不回 Key 本体）。"""
     custom = bool(os.environ.get("FINPIPE_CLIENT_ID")) or \
@@ -544,6 +793,7 @@ def key_save(payload: dict[str, Any]) -> dict[str, Any]:
 
 HANDLERS = {
     "dividend-xray": run_dividend_xray,
+    "dividend-quality": run_dividend_quality,
     "positions-save": save_positions,
     "positions-list": list_positions,
     "positions-load": load_positions,
@@ -554,6 +804,7 @@ HANDLERS = {
     "watchlist-groups": watchlist_groups,
     "ledger": run_ledger,
     "calendar": run_calendar,
+    "diagnose": run_diagnose,
     "key-status": key_status,
     "key-save": key_save,
 }

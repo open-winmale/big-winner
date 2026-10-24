@@ -1,4 +1,4 @@
-/* 持仓收息透视表 · 前端
+/* 收息佬 · 前端
    交互模型：市场切换 + 单框搜索添加 → chips（含市场徽标）→ 一键生成。
    持仓数据结构带 market 字段：cn → 600036；hk → hk.00700（SDK 需前缀）。 */
 (function () {
@@ -79,6 +79,10 @@
     flat: '统一税率', hk_default: '港股默认', fallback: '估算(缺买入日)'
   }[s] || s || '自动');
 
+  function defaultBuyDate() {
+    return `${new Date().getFullYear()}-01-01`;
+  }
+
   function normalizePosition(p) {
     let tax = '';
     if (p.tax_rate !== '' && p.tax_rate != null) {
@@ -91,7 +95,7 @@
       name: p.name || '',
       shares: p.shares,
       cost: p.cost == null ? '' : p.cost,
-      buy_date: p.buy_date || '',
+      buy_date: p.buy_date || defaultBuyDate(),
       tax_rate: tax,
     };
   }
@@ -131,7 +135,7 @@
       name: p.name,
       shares: p.shares || 1000,
       cost: p.cost == null ? '' : p.cost,
-      buy_date: p.buy_date || '',
+      buy_date: p.buy_date || defaultBuyDate(),
       tax_rate: p.tax_rate == null ? '' : p.tax_rate,
     });
     renderChips();
@@ -141,20 +145,19 @@
     if (input && !p.silent) { input.focus(); input.select(); }
   }
 
-  /* ---------------- 持仓明细：成本 / 买入日 / 税率覆盖 ---------------- */
+  /* ---------------- 持仓明细：成本（选填）/ 买入日 / 税率覆盖 ---------------- */
   function updateHoldingsSummary() {
     const summary = document.getElementById('holdings-summary');
     if (!summary) return;
     if (!positions.length) {
-      summary.textContent = '持仓明细：成本 / 买入日 / 税率覆盖';
+      summary.textContent = '持仓明细：成本（选填）/ 买入日 / 税率覆盖';
       return;
     }
     const n = positions.length;
     const noCost = positions.filter((p) => p.cost === '' || p.cost == null).length;
-    const noBuy = positions.filter((p) => !p.buy_date).length;
-    const cls = (noCost || noBuy) ? 'warn' : 'ok';
-    summary.innerHTML = `持仓明细：成本 / 买入日 / 税率覆盖
-      <span class="badge ${cls}">成本 ${n - noCost}/${n} · 买入日 ${n - noBuy}/${n}</span>`;
+    const cls = noCost ? 'warn' : 'ok';
+    summary.innerHTML = `持仓明细：成本（选填）/ 买入日 / 税率覆盖
+      <span class="badge ${cls}">成本 ${n - noCost}/${n}（选填）</span>`;
   }
 
   function renderHoldingsEditor() {
@@ -201,14 +204,15 @@
       <div class="table-scroll">
         <table class="holdings-table">
           <thead><tr>
-            <th>代码</th><th>名称</th><th class="num">股数</th><th class="num">成本价</th>
+            <th>代码</th><th>名称</th><th class="num">股数</th><th class="num">成本价 <span class="muted">(选填)</span></th>
             <th>买入日期</th><th class="num">税率覆盖 %</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
       <div class="muted" style="font-size:11.5px;margin-top:6px">
-        成本价按报价币种填（港股 HKD）；买入日期用于按持有时长估红利税；
+        成本价选填（按报价币种，港股 HKD），填了才有成本股息率与浮盈；
+        买入日期默认今年 1 月 1 日，用于按持有时长估红利税；
         税率覆盖留空 = 按规则自动（A 股按持有期，港股默认 20%）。
       </div>`;
     bindHoldingsBulk();
@@ -352,20 +356,21 @@
         <td class="num">${fmtPriceCcy(r.dps_ttm, r.currency)}</td>
         <td class="num strong">${fmtPct(r.div_yield)}</td>
         <td class="num strong">${fmtPct(r.cost_yield)}</td>
-        <td class="num">${fmtPct(r.payout, 1)}</td>
+        <td class="num">${fmtPct(r.payout, 1)}${r.market === 'hk' && r.payout != null ? ' <span class="currency-tag">待核验</span>' : ''}</td>
         <td class="num">${fmtMoneyCcy(r.annual_dividend, r.currency)}</td>
         <td class="num">${fmtSigned(r.pnl_ratio)}</td>
         <td>${r.missing && r.missing.length
             ? r.missing.map((m) => `<span class="badge warn">${esc(m)}</span>`).join(' ')
             : '<span class="muted">·</span>'}</td>
+        <td class="cell-action"><button class="btn-analyze" data-diagnose-code="${esc(r.code)}" title="分红持续性分析"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M1 8h3l2-5 3 10 2-5h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>分析</button></td>
       </tr>`).join('');
 
     return `<div class="table-scroll"><table class="xray-table">
       <thead><tr>
         <th>代码</th><th>名称</th><th class="num">持股</th><th class="num">现价</th>
         <th class="num">市值(原币)</th><th class="num">占比</th><th class="num">每股利润</th>
-        <th class="num">每股股息</th><th class="num">股息率</th><th class="num">成本股息率</th><th class="num">派息率</th>
-        <th class="num">持仓年息(原币)</th><th class="num">浮动</th><th>数据说明</th>
+        <th class="num">每股股息</th><th class="num">股息率</th><th class="num">成本股息率</th><th class="num" title="现金分红 ÷ 归母净利润">分红率(TTM)</th>
+        <th class="num">持仓年息(原币)</th><th class="num">浮动</th><th>数据说明</th><th>分析</th>
       </tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr>
@@ -379,6 +384,7 @@
         <td class="num">${DASH}</td>
         <td class="num">${fmtMoney(d.total_dividend)}</td>
         <td class="num">${fmtSigned(d.portfolio_pnl_ratio)}</td>
+        <td></td>
         <td></td>
       </tr></tfoot></table></div>
       ${d.fx_note ? `<div class="muted" style="font-size:12px;margin-top:8px">${esc(d.fx_note)}</div>` : ''}`;
@@ -403,12 +409,188 @@
           <span class="hint">描述性统计，不构成任何操作建议</span></div>
         <div class="buckets">${parts.join('')}</div>
         ${buckets ? `<div class="card-head" style="margin:18px 0 10px">
-          <h2 style="font-size:13px">派息率分档</h2></div><div class="buckets">${buckets}</div>` : ''}
+          <h2 style="font-size:13px">分红率分档（现金分红 ÷ 归母净利润）</h2></div><div class="buckets">${buckets}</div>` : ''}
         ${(s.warnings && s.warnings.length) ? `<ul class="notes" style="margin-top:16px">
           ${s.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
         ${(d.notes && d.notes.length) ? `<ul class="notes" style="margin-top:12px;color:var(--text-3)">
           ${d.notes.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
       </div>`;
+  }
+
+  /* ---------------- 分红质量卡 ---------------- */
+  async function openQuality() {
+    const panel = document.getElementById('quality-panel');
+    if (!panel) return;
+    if (!positions.length) {
+      panel.innerHTML = '<div class="card"><div class="empty">先添加持仓再分析</div></div>';
+      return;
+    }
+    panel.innerHTML = `<div class="card">
+      <div class="card-head"><h2>分红质量分析</h2>
+        <span class="hint">每票 1 次指标 + 每市场 1 次分红历史；约 10–30 秒，5 分钟缓存</span></div>
+      ${Array(5).fill('<div class="skeleton" style="margin:9px 0"></div>').join('')}
+    </div>`;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try {
+      const d = await api('dividend-quality', {
+        positions: positions.map(calendarPositionPayload),
+      });
+      renderQuality(panel, d);
+    } catch (e) {
+      panel.innerHTML = `<div class="card"><div class="error"><strong>分红质量取数失败：</strong>${esc(e.message)}</div></div>`;
+    }
+  }
+
+  function abilityBand(score) {
+    if (score == null) return { label: '—', cls: '' };
+    if (score >= 80) return { label: '强', cls: 'ok' };
+    if (score >= 60) return { label: '中', cls: 'ok' };
+    if (score >= 40) return { label: '偏弱', cls: 'warn' };
+    return { label: '弱', cls: 'warn' };
+  }
+
+  function confidenceLabel(c) {
+    return { high: '高', medium: '中', low: '低' }[c] || c || '—';
+  }
+
+  function renderQuality(panel, d) {
+    const s = d.summary || {};
+    const skipped = (s.skipped || []).length;
+    const kpis = [
+      { label: '可评分标的', value: `${s.scored_count || 0} / ${s.eligible_count || 0}`,
+        sub: skipped ? `另 ${skipped} 只暂不评分` : 'A 股非金融' },
+      { label: '平均支付能力', value: s.avg_ability != null ? String(s.avg_ability) : '—',
+        sub: s.avg_ability != null ? abilityBand(s.avg_ability).label : '—' },
+      { label: '分红意愿', value: ['A', 'B', 'C', 'D'].map((g) =>
+          `${g}:${s.willingness?.[g] || 0}`).join(' '),
+        sub: '连续性 / 趋势 / 资本动作' },
+      { label: '覆盖不足', value: String(s.coverage_thin || 0),
+        sub: 'FCF 或 OCF 覆盖 < 1' },
+      { label: '高股息陷阱', value: String(s.yield_trap || 0),
+        sub: '股息率 ≥ 6% 且支付能力 < 50' },
+      { label: '平均分红率(TTM)', value: fmtPct(s.avg_payout_ttm, 1),
+        sub: `平均 OCF 覆盖 ${s.avg_ocf_cover != null ? s.avg_ocf_cover.toFixed(2) + 'x' : '—'}` },
+    ];
+    const rows = (d.rows || []).map((r, i) => {
+      const band = abilityBand(r.ability_score);
+      const flags = (r.flags || []).map((f) => `<span class="badge warn">${esc(f)}</span>`).join(' ');
+      return `
+      <tr class="quality-row" data-q-idx="${i}">
+        <td><span class="chip-mkt mkt-${r.market || 'cn'}">${mktLabel(r.market)}</span> ${esc(r.code)}</td>
+        <td>${esc(r.name)}${r.org_form ? ` <span class="currency-tag">${esc(r.org_form)}</span>` : ''}</td>
+        <td class="num">${fmtPct(r.yield_ttm)}</td>
+        <td class="num">${fmtPct(r.payout_ttm, 1)}</td>
+        <td class="num">${fmtPct(r.payout_lyr, 1)}</td>
+        <td class="num">${fmtPct(r.payout_3y_avg, 1)}</td>
+        <td class="num">${esc(r.payout_trend == null ? '—'
+          : { up: '↑', down: '↓', flat: '→' }[r.payout_trend] || r.payout_trend)}</td>
+        <td class="num">${r.consecutive_years == null ? DASH : r.consecutive_years + ' 年'}</td>
+        <td class="num">${r.ocf_cover == null ? (r.eligible ? DASH : 'N/A') : r.ocf_cover.toFixed(2) + 'x'}</td>
+        <td class="num">${r.fcf_cover == null ? (r.org_type === 1 ? DASH : 'N/A') : r.fcf_cover.toFixed(2) + 'x'}</td>
+        <td class="num">${fmtPct(r.tl_rate, 1)}</td>
+        <td>${r.eligible
+          ? `<span class="badge ${band.cls}">${band.label} ${r.ability_score}</span>`
+          : `<span class="badge">暂不评分</span>`}</td>
+        <td>${r.willingness_grade
+          ? `<span class="badge ${r.willingness_grade === 'A' || r.willingness_grade === 'B' ? 'ok' : 'warn'}">${r.willingness_grade}</span>`
+          : DASH}</td>
+        <td>${r.eligible
+          ? `<span class="muted">${confidenceLabel(r.confidence)}</span>${flags ? '<br>' + flags : ''}`
+          : `<span class="muted">${esc(r.reason || '')}</span>`}
+          <button class="btn-analyze" data-diagnose-code="${esc(r.code)}" title="分红持续性分析"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M1 8h3l2-5 3 10 2-5h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>分析</button></td>
+      </tr>
+      <tr class="quality-detail" data-qd-idx="${i}" style="display:none">
+        <td colspan="14">${renderQualityDetail(r)}</td>
+      </tr>`;
+    }).join('');
+
+    panel.innerHTML = `<div class="card">
+      <div class="card-head"><h2>分红质量分析</h2>
+        <span class="hint">只对 A 股非金融评分；点击行展开分项与近 5 年明细</span></div>
+      <div class="kpis">${kpis.map((k) => `
+        <div class="kpi"><div class="label">${esc(k.label)}</div>
+          <div class="value">${k.value}</div>
+          <div class="sub">${esc(k.sub)}</div></div>`).join('')}</div>
+      <div class="table-scroll" style="margin-top:14px"><table class="quality-table">
+        <thead><tr>
+          <th>代码</th><th>名称</th><th class="num">股息率</th>
+          <th class="num">分红率(TTM)</th><th class="num">分红率(财年)</th>
+          <th class="num">3年均值</th><th class="num">趋势</th><th class="num">连续分红</th>
+          <th class="num">OCF覆盖</th><th class="num">FCF覆盖</th><th class="num">资产负债率</th>
+          <th>支付能力</th><th>分红意愿</th><th>说明</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      ${(d.notes || []).length ? `<ul class="notes" style="margin-top:12px">${d.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+    </div>`;
+    panel.querySelectorAll('.quality-row').forEach((tr) => {
+      tr.onclick = (e) => {
+        if (e.target && e.target.getAttribute &&
+            e.target.getAttribute('data-diagnose-code')) return;
+        const i = tr.getAttribute('data-q-idx');
+        const detail = panel.querySelector(`[data-qd-idx="${i}"]`);
+        if (detail) detail.style.display = detail.style.display === 'none' ? '' : 'none';
+      };
+    });
+    panel.querySelectorAll('[data-diagnose-code]').forEach((btn) => {
+      btn.onclick = () => {
+        openDiagnoseModal(btn.getAttribute('data-diagnose-code'));
+      };
+    });
+  }
+
+  function renderQualityDetail(r) {
+    const bands = r.ability_bands || {};
+    const bandLine = (key, label, weight) => {
+      const b = bands[key] || {};
+      const notes = [b.band, b.vs_industry, b.mix, b.note, b.cf_np_penalty,
+        b.trend_penalty, b.ibd_penalty, b.quick_penalty, b.ocf_min,
+        b.np_decline].filter(Boolean).join('；');
+      return `<li><strong>${esc(label)}</strong>（${weight}）：${esc(notes || '—')}</li>`;
+    };
+    const recurring = (r.recurring_by_year || []).map((y) =>
+      `<tr><td>${y.year}</td><td class="num">${fmtPrice(y.dps)}</td>
+       <td class="num">${y.count}</td><td>${y.special ? '<span class="badge warn">含特别</span>' : '·'}</td></tr>`).join('');
+    const specials = (r.specials || []).map((sp) =>
+      `<span class="badge warn">${sp.year} ${esc(sp.kind || '特别')} ${fmtPrice(sp.dps)}</span>`).join(' ') || '—';
+    const missing = (r.missing || []).map((m) => `<span class="badge warn">${esc(m)}</span>`).join(' ') || '无';
+    return `<div class="quality-detail-body">
+      <div class="quality-cols">
+        <div>
+          <h4>支付能力分项（权重公开可复现）</h4>
+          <ul class="notes">
+            ${bandLine('cash', '现金流覆盖', '35%')}
+            ${bandLine('payout', '分红率纪律', '25%')}
+            ${bandLine('debt', '资产负债', '20%')}
+            ${bandLine('stability', '盈利稳定性', '20%')}
+          </ul>
+          <h4>覆盖计算</h4>
+          <ul class="notes">
+            <li>归母净利 TTM ${fmtMoney(r.npts_ttm)} · 经营现金流 ${fmtMoney(r.ncfo_ttm)} · FCF ${r.fcf_ttm == null ? 'N/A' : fmtMoney(r.fcf_ttm)}</li>
+            <li>盈利覆盖 ${r.earnings_cover == null ? '—' : r.earnings_cover.toFixed(2) + 'x'} ·
+                现金转化 OCF/NP ${r.cash_conversion == null ? '—' : r.cash_conversion.toFixed(2)} ·
+                资本开支占比 ${r.capex_ratio == null ? '—' : fmtPct(r.capex_ratio, 0)}</li>
+            <li>ROE ${fmtPct(r.roe, 1)} · ROIC ${fmtPct(r.roic, 1)} · 净利同比 ${fmtSigned(r.npts_yoy)}</li>
+            <li>有息负债率 ${fmtPct(r.ibd_rate, 1)} · 速动 ${r.quick == null ? '—' : r.quick.toFixed(2)}</li>
+          </ul>
+        </div>
+        <div>
+          <h4>近 5 年经常性每股分红（特别分红另列）</h4>
+          <table><thead><tr><th>年度</th><th class="num">每股(元)</th>
+            <th class="num">笔数</th><th>口径</th></tr></thead>
+          <tbody>${recurring || '<tr><td colspan="4" class="muted">无记录</td></tr>'}</tbody></table>
+          <div style="margin-top:6px">特别分红：${specials}</div>
+          <h4 style="margin-top:12px">股本结构（仅展示）</h4>
+          <ul class="notes">
+            <li>前十大流通股东合计 ${fmtPct(r.free_holder_sum, 1)} · 管理层持股 ${fmtPct(r.exec_hold, 1)}</li>
+            <li>近 6 个月回购：${r.has_buyback == null ? '—' : (r.has_buyback ? '有' : '无')}</li>
+            <li class="muted">实控人/机构/北向/质押：SDK 暂无稳定数据，未纳入</li>
+          </ul>
+          <h4 style="margin-top:12px">数据说明</h4>
+          <div>${missing}</div>
+        </div>
+      </div>
+    </div>`;
   }
 
   /* ---------------- 分红日历 / 收息驾驶舱 ---------------- */
@@ -434,7 +616,7 @@
       <div class="card calendar-card">
         <div class="card-head">
           <h2>分红日历</h2>
-          <span class="hint">未来除权/到账 + 税后现金；预案单独标注</span>
+          <span class="hint">未来除权/到账与分红金额；预案单独标注。税后测算在「记账」</span>
           <span class="spacer"></span>
           <button class="ghost" id="calendar-refresh" style="padding:4px 10px;font-size:12.5px">刷新</button>
         </div>
@@ -451,6 +633,220 @@
         <div id="calendar-body"></div>
       </div>`;
     bindCalendarControls();
+  }
+
+  /* ---------------- 分红持续性分析（每票按钮 → 可视化弹层） ---------------- */
+  function bindDiagnoseButtons(root) {
+    (root || document).querySelectorAll('[data-diagnose-code]').forEach((btn) => {
+      if (btn.dataset.diagBound) return;
+      btn.dataset.diagBound = '1';
+      btn.onclick = () => openDiagnoseModal(btn.getAttribute('data-diagnose-code'));
+    });
+  }
+
+  let diagModalOpen = false;
+
+  function openDiagnoseModal(code) {
+    if (!code) return;
+    let overlay = document.getElementById('diag-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'diag-overlay';
+      overlay.className = 'diag-overlay';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeDiagnoseModal();
+      });
+    }
+    diagModalOpen = true;
+    overlay.innerHTML = `
+      <div class="diag-modal card" role="dialog" aria-modal="true">
+        <div class="card-head">
+          <h2>分红持续性分析</h2>
+          <span class="hint" id="diag-modal-sub">${esc(code)} · 取数中…</span>
+          <span class="spacer"></span>
+          <button class="ghost" id="diag-close" style="padding:4px 10px">关闭</button>
+        </div>
+        <div id="diag-modal-body">
+          ${Array(5).fill('<div class="skeleton" style="margin:9px 0"></div>').join('')}
+        </div>
+      </div>`;
+    document.getElementById('diag-close').onclick = closeDiagnoseModal;
+    document.body.style.overflow = 'hidden';
+    api('diagnose', { code }).then((d) => {
+      if (!diagModalOpen) return;
+      renderDiagnoseModal(d);
+    }).catch((e) => {
+      const body = document.getElementById('diag-modal-body');
+      if (body && diagModalOpen) {
+        body.innerHTML = `<div class="error"><strong>分析失败：</strong>${esc(e.message)}</div>`;
+      }
+    });
+  }
+
+  function closeDiagnoseModal() {
+    diagModalOpen = false;
+    document.body.style.overflow = '';
+    const overlay = document.getElementById('diag-overlay');
+    if (overlay) overlay.remove();
+  }
+
+  const ORG_TYPE_LABEL = { 1: '一般企业', 2: '银行', 3: '保险', 4: '证券' };
+
+  function diagAbilityBars(r) {
+    const bands = r.ability_bands || {};
+    const items = [
+      { key: 'cash', label: '现金流覆盖', weight: 35 },
+      { key: 'payout', label: '分红率纪律', weight: 25 },
+      { key: 'debt', label: '资产负债', weight: 20 },
+      { key: 'stability', label: '盈利稳定性', weight: 20 },
+    ];
+    return `<div class="diag-bars">${items.map((it) => {
+      const b = bands[it.key] || {};
+      // 分项条按得分率填充（得分/权重），缺失时不填充
+      const hasScore = b.score != null && b.weight;
+      const pct = hasScore ? Math.max(0, Math.min(100, (b.score / b.weight) * 100)) : 0;
+      const cls = !hasScore ? '' : (pct >= 70 ? 'good' : (pct >= 40 ? 'ok' : 'bad'));
+      const notes = [b.band, b.vs_industry, b.mix, b.note, b.cf_np_penalty,
+        b.trend_penalty, b.ibd_penalty, b.quick_penalty, b.ocf_min,
+        b.np_decline].filter(Boolean).join('；');
+      return `<div class="diag-bar-row">
+        <div class="diag-bar-label">${esc(it.label)} <span class="muted">${it.weight}%</span></div>
+        <div class="diag-bar-track">
+          ${hasScore ? `<span class="diag-bar-fill ${cls}" style="width:${pct}%"></span>` : ''}
+        </div>
+        <div class="diag-bar-score">${hasScore ? `${b.score} / ${b.weight}` : '缺数据'}</div>
+        <div class="diag-bar-note">${esc(notes || '—')}</div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function diagPayoutChart(r) {
+    const series = r.payout_series || [];
+    const recurring = r.recurring_by_year || [];
+    const dpsByYear = {};
+    recurring.forEach((it) => { dpsByYear[it.year] = it.dps; });
+    const years = [];
+    const seen = new Set();
+    series.forEach((p) => { if (!seen.has(p.year)) { seen.add(p.year); years.push(p.year); } });
+    recurring.forEach((it) => { if (!seen.has(it.year)) { seen.add(it.year); years.push(it.year); } });
+    years.sort((a, b) => a - b);
+    const shown = years.slice(-6);
+    if (!shown.length) return '';
+    const maxPayout = Math.max(0.001, ...series.map((p) => p.payout || 0));
+    const maxDps = Math.max(0.001, ...shown.map((y) => dpsByYear[y] || 0));
+    const cols = shown.map((y) => {
+      const payout = (series.find((p) => p.year === y) || {}).payout;
+      const dps = dpsByYear[y];
+      const ph = payout != null ? Math.max(4, (payout / maxPayout) * 100) : 0;
+      const dh = dps != null ? Math.max(4, (dps / maxDps) * 100) : 0;
+      return `<div class="diag-col">
+        <div class="diag-col-bars">
+          <div class="diag-col-bar payout" style="height:${ph}%">
+            <span class="diag-col-val">${payout != null ? Math.round(payout * 100) + '%' : ''}</span></div>
+          <div class="diag-col-bar dps" style="height:${dh}%">
+            <span class="diag-col-val">${dps != null ? dps.toFixed(2) : ''}</span></div>
+        </div>
+        <div class="diag-col-year">${y}</div>
+      </div>`;
+    }).join('');
+    return `<h4 class="diag-sec">近 5 年分红（蓝=分红率，绿=每股分红元）</h4>
+      <div class="diag-chart">${cols}</div>
+      ${(r.specials || []).length ? `<div class="muted" style="font-size:11.5px;margin-top:6px">
+        特别分红（不计入经常性口径）：${r.specials.map((sp) =>
+          `${sp.year} ${esc(sp.kind || '特别')} ${fmtPrice(sp.dps)}`).join('、')}</div>` : ''}`;
+  }
+
+  function diagCoverageBars(r) {
+    const rows = [
+      { label: 'OCF 覆盖', value: r.ocf_cover, hint: '经营现金流 ÷ 分红' },
+      { label: 'FCF 覆盖', value: r.fcf_cover, hint: '自由现金流 ÷ 分红' },
+    ];
+    return `<h4 class="diag-sec">股息覆盖（1.0x = 分红刚好被现金流覆盖）</h4>
+      <div class="diag-cov">${rows.map((it) => {
+        if (it.value == null) {
+          return `<div class="diag-cov-row">
+            <div class="diag-bar-label">${esc(it.label)}</div>
+            <div class="muted" style="font-size:12px">N/A${r.org_type !== 1 ? '（金融股不适用）' : ''}</div>
+          </div>`;
+        }
+        const capped = Math.min(it.value, 2.5);
+        const pct = (capped / 2.5) * 100;
+        const mark = (1.0 / 2.5) * 100;
+        const cls = it.value >= 1.5 ? 'good' : (it.value >= 1.0 ? 'ok' : 'bad');
+        return `<div class="diag-cov-row">
+          <div class="diag-bar-label">${esc(it.label)}</div>
+          <div class="diag-cov-track">
+            <span class="diag-cov-fill ${cls}" style="width:${pct}%"></span>
+            <span class="diag-cov-mark" style="left:${mark}%"></span>
+          </div>
+          <div class="diag-cov-val ${it.value < 1 ? 'bad-text' : ''}">${it.value.toFixed(2)}x</div>
+          <div class="muted" style="font-size:11px">${esc(it.hint)}</div>
+        </div>`;
+      }).join('')}</div>`;
+  }
+
+  function renderDiagnoseModal(d) {
+    const body = document.getElementById('diag-modal-body');
+    const sub = document.getElementById('diag-modal-sub');
+    if (!body) return;
+    const p = d.profile || {};
+    const q = d.quote || {};
+    const r = d.quality || {};
+    const band = abilityBand(r.ability_score);
+    if (sub) sub.textContent = `${d.code}${p.name ? ' · ' + p.name : ''}`;
+    const orgForm = p.org_form
+      || (d.market === 'hk' ? '—（港股暂无该标签）' : '—');
+
+    const headHtml = `
+      <div class="kpis">
+        <div class="kpi"><div class="label">股票</div>
+          <div class="value" style="font-size:16px">${esc(p.name || d.code)}
+            <span class="chip-mkt mkt-${d.market}">${mktLabel(d.market)}</span></div>
+          <div class="sub">${esc(d.code)} · 现价 ${fmtPriceCcy(q.price, q.currency)}</div></div>
+        <div class="kpi"><div class="label">企业类型</div>
+          <div class="value" style="font-size:16px">${esc(orgForm)}</div>
+          <div class="sub">${p.industry ? esc(p.industry) + ' · ' : ''}${esc(ORG_TYPE_LABEL[p.org_type] || '')}</div></div>
+        <div class="kpi"><div class="label">股息率 / 分红率(TTM)</div>
+          <div class="value" style="font-size:16px">${fmtPct(q.yield_ttm)} / ${fmtPct(q.payout_ttm, 1)}
+            ${d.market === 'hk' && q.payout_ttm != null ? '<span class="currency-tag">待核验</span>' : ''}</div>
+          <div class="sub">上市 ${p.listing_date || '—'}</div></div>
+        <div class="kpi"><div class="label">支付能力 / 分红意愿</div>
+          <div class="value" style="font-size:16px">${r.eligible && r.ability_score != null
+            ? `${r.ability_score} <span class="badge ${band.cls}">${band.label}</span>` : DASH}
+            ${r.willingness_grade ? `<span class="badge ${r.willingness_grade === 'A' || r.willingness_grade === 'B' ? 'ok' : 'warn'}">${r.willingness_grade}</span>` : ''}</div>
+          <div class="sub">连续分红 ${r.consecutive_years == null ? DASH : r.consecutive_years + ' 年'}</div></div>
+      </div>`;
+
+    const flags = r.flags || [];
+    const flagsHtml = flags.length
+      ? `<div style="margin:10px 0">${flags.map((f) =>
+          `<span class="badge warn">${esc(f)}</span>`).join(' ')}</div>` : '';
+
+    let analysisHtml;
+    if (r.eligible) {
+      analysisHtml = diagAbilityBars(r) + diagCoverageBars(r) + diagPayoutChart(r) + `
+        <div class="muted" style="font-size:11.5px;margin-top:10px">
+          资产负债率 ${fmtPct(r.tl_rate, 1)}${r.tl_ind_avg ? `（行业均值 ${fmtPct(r.tl_ind_avg, 1)}）` : ''} ·
+          ROE ${fmtPct(r.roe, 1)} · 现金转化 ${r.cash_conversion == null ? DASH : r.cash_conversion.toFixed(2)} ·
+          置信度 ${confidenceLabel(r.confidence)}</div>`;
+    } else {
+      analysisHtml = `<div class="muted" style="margin-top:10px;font-size:12.5px">
+        暂不评分：${esc(r.reason || '')}
+        ${r.payout_ttm != null ? `· 分红率(TTM) ${fmtPct(r.payout_ttm, 1)}` : ''}
+        ${r.tl_rate != null ? `· 资产负债率 ${fmtPct(r.tl_rate, 1)}` : ''}
+        ${r.roe != null ? `· ROE ${fmtPct(r.roe, 1)}` : ''}
+      </div>`;
+    }
+
+    const ev = d.next_event;
+    const eventHtml = ev ? `
+      <h4 class="diag-sec">下一次分红（观察口径）</h4>
+      <div class="event-list">${eventRow(ev, { noAction: true })}</div>` : '';
+
+    const notes = (d.notes || []).map((n) => `<li>${esc(n)}</li>`).join('');
+    body.innerHTML = headHtml + flagsHtml + analysisHtml + eventHtml +
+      (notes ? `<ul class="notes" style="margin-top:12px">${notes}</ul>` : '');
   }
 
   function bindCalendarControls() {
@@ -500,12 +896,31 @@
         loadCalendar('positions');
         return;
       }
-      setAutoNote('还没有保存持仓；先添加股票，或看看高股息池即将分红。');
-      renderCalendarEmpty();
+      // 首次使用：注入示例持仓（仅内存，不落库），让驾驶舱开箱即有内容
+      seedDemoPosition();
     } catch (_) {
-      setAutoNote('还没有保存持仓；先添加股票，或看看高股息池即将分红。');
-      renderCalendarEmpty();
+      // 接口失败（如 demo 无档案）也走示例持仓
+      if (!positions.length) seedDemoPosition();
     }
+  }
+
+  function seedDemoPosition() {
+    positions.length = 0;
+    positions.push(normalizePosition({
+      code: '600036', market: 'cn', name: '招商银行', shares: 1000,
+    }));
+    renderChips();
+    renderHoldingsEditor();
+    setAutoNote(`示例持仓：招商银行 · 1,000 股（仅本次会话）
+      <button class="link" id="auto-load-edit">编辑持仓</button>`);
+    const edit = document.getElementById('auto-load-edit');
+    if (edit) edit.onclick = () => {
+      const card = document.getElementById('positions-card');
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const details = document.getElementById('holdings-details');
+      if (details) details.open = true;
+    };
+    loadCalendar('positions');
   }
 
   function renderCalendarEmpty() {
@@ -615,41 +1030,6 @@
   function renderCalendarBody(d) {
     const body = document.getElementById('calendar-body');
     if (!body) return;
-    const s = d.summary || {};
-    const next = s.next_event;
-    const exCount = s.ex_count_30 || 0;
-    let kpis;
-    if (d.mode === 'positions') {
-      const exNet = s.next_30_ex_net != null ? s.next_30_ex_net : s.next_30_net;
-      const exGross = s.next_30_ex_gross != null ? s.next_30_ex_gross : s.next_30_gross;
-      kpis = [
-        { label: '未来 30 天除权 · 税后', value: fmtMoney(exNet),
-          sub: exCount ? `${exCount} 只 · 税前 ${plainMoney(exGross)} · CNY${s.plan_count ? ` · 预案 ${s.plan_count}` : ''}` : '没有已公告事件' },
-        { label: '今年已收 · 税后', value: fmtMoney(s.received_ytd_net),
-          sub: `税前 ${plainMoney(s.received_ytd_gross)} · CNY` },
-        { label: '下次事件', value: next ? esc(next.ex_date || next.pay_date || '待定') : '—',
-          sub: next ? `${next.name} · ${next.stage}` : '暂无' },
-        { label: '年息（TTM）', value: fmtMoney(s.annual_dividend),
-          sub: s.cost_yield != null ? `CNY · 成本股息率 ${plainPct(s.cost_yield)}` : 'CNY · 填成本后可见' },
-      ];
-    } else {
-      kpis = [
-        { label: '未来 30 天除权', value: `${exCount} 只`, sub: '已公告事件' },
-        { label: '高股息池', value: `${s.position_count || 0} 只`,
-          sub: `${d.market === 'hk' ? '港股' : 'A 股'} · 股息率 ≥ 3%` },
-        { label: '下次除权', value: next ? esc(next.ex_date || '待定') : '—',
-          sub: next ? esc(next.name) : '暂无' },
-        { label: '预案待定', value: `${s.plan_count || 0} 只`, sub: '已公告、日期待定' },
-      ];
-    }
-    const kpiHtml = `<div class="kpis">` + kpis.map((k) => `
-      <div class="kpi ${k.cls || ''}">
-        <div class="label">${esc(k.label)}</div>
-        <div class="value">${k.value}</div>
-        ${k.sub ? `<div class="sub">${esc(k.sub)}</div>` : ''}
-      </div>`).join('') + `</div>`;
-
-    const goalHtml = renderIncomeGoal(d);
     const futureStages = new Set(['待除权', '已除权待到账', '预案待定']);
     const hasFuture = (d.events || []).some(
       (e) => futureStages.has(e.stage) && eventInHorizon(e, calendarHorizon));
@@ -664,10 +1044,8 @@
            市场视图来自平台高股息选股池（股息率 ≥ 3%），只展示其中已公告的分红事件，不是全市场逐票扫描。
          </div>`
       : '';
-    const notes = (d.notes || []).map((n) => `<li>${esc(n)}</li>`).join('');
-    body.innerHTML = kpiHtml + goalHtml + marketHint + eventHtml +
-      (needPreview ? '<div id="calendar-market-preview" class="market-preview"></div>' : '') +
-      (notes ? `<ul class="notes" style="margin-top:12px">${notes}</ul>` : '');
+    body.innerHTML = marketHint + eventHtml +
+      (needPreview ? '<div id="calendar-market-preview" class="market-preview"></div>' : '');
     bindCalendarBodyActions();
     if (needPreview) ensureMarketPreview();
   }
@@ -745,31 +1123,7 @@
     </div>`;
     const all = box.querySelector('[data-market-all]');
     if (all) all.onclick = () => loadCalendar('market');
-  }
-
-  function renderIncomeGoal(d) {
-    if (d.mode !== 'positions') return '';
-    const annual = d.summary && d.summary.annual_dividend;
-    if (annual == null) return '';
-    let goal = Number(localStorage.getItem('fp_income_goal'));
-    if (!isFinite(goal) || goal <= 0) goal = 100000;
-    const pct = goal > 0 ? Math.min(1, annual / goal) : 0;
-    const gap = Math.max(0, goal - annual);
-    const costYield = d.summary.cost_yield;
-    const required = (costYield && costYield > 0) ? gap / costYield : null;
-    return `<div class="goal-row">
-      <div class="goal-line">
-        <span>年息目标</span>
-        <input id="income-goal" type="number" min="0" step="1000" value="${goal}">
-        <span>元/年</span>
-        <span class="goal-num">${fmtMoney(annual)} / ${fmtMoney(goal)}</span>
-        <span class="muted">${(pct * 100).toFixed(1)}%</span>
-        ${required != null
-          ? `<span class="muted">按当前成本股息率，还差本金约 ${fmtMoney(required)}</span>`
-          : `<span class="muted">填成本后可见所需本金</span>`}
-      </div>
-      <div class="progress"><span style="width:${(pct * 100).toFixed(1)}%"></span></div>
-    </div>`;
+    bindDiagnoseButtons(box);
   }
 
   function eventInHorizon(e, horizon) {
@@ -814,11 +1168,11 @@
     return html;
   }
 
-  function eventRow(e) {
+  function eventRow(e, opts) {
+    const noAction = opts && opts.noAction;
     const stageCls = e.stage === '已到账' ? 'paid'
       : (e.stage === '待除权' || e.stage === '预案待定' ? 'pending' : '');
     const stageBadge = `<span class="stage ${stageCls}">${esc(e.stage)}</span>`;
-    const estBadge = e.estimated ? ' <span class="badge warn">估算</span>' : '';
     const dateLabel = !e.ex_date && !e.pay_date
       ? '<div class="date">待定</div>'
       : (e.stage === '已到账' || e.stage === '已除权待到账')
@@ -828,8 +1182,9 @@
     const timeline = `登记 ${e.record_date || '—'} · 除权 ${e.ex_date || '—'} · 到账 ${e.pay_date || '—'}`;
     let amount;
     if (e.shares > 0) {
-      amount = `<div class="strong">${fmtMoneyCcy(e.net, e.currency)}</div>
-        <div class="meta">税前 ${fmtMoneyCcy(e.gross, e.currency)} · ${fmtInt(e.shares)} 股</div>`;
+      // 只展示事实金额：股数 × 每股股息（税前）；税后测算在「记账」里
+      amount = `<div class="strong">${fmtMoneyCcy(e.gross, e.currency)}</div>
+        <div class="meta">${fmtInt(e.shares)} 股 × ${fmtPriceCcy(e.dps, e.currency)}</div>`;
     } else {
       const extra = e.yield_ttm != null ? `${fmtPct(e.yield_ttm)} 股息率`
         : `${fmtPriceCcy(e.dps, e.currency)}/股`;
@@ -843,16 +1198,18 @@
         <div class="meta">${esc(meta)}</div>
       </div>
       <div>
-        <div>${stageBadge}${estBadge}</div>
+        <div>${stageBadge}</div>
         <div class="meta">${esc(timeline)}</div>
       </div>
       <div class="amount">${amount}</div>
+      ${noAction ? '' : `<div class="actions"><button class="btn-analyze" data-diagnose-code="${esc(e.code)}" title="分红持续性分析"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M1 8h3l2-5 3 10 2-5h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>分析</button></div>`}
     </div>`;
   }
 
   function bindCalendarBodyActions() {
     const body = document.getElementById('calendar-body');
     if (!body) return;
+    bindDiagnoseButtons(body);
     body.querySelectorAll('[data-pool]').forEach((btn) => {
       btn.onclick = () => {
         calendarMarket = btn.getAttribute('data-pool');
@@ -861,14 +1218,6 @@
     });
     const importBtn = document.getElementById('calendar-import-group');
     if (importBtn) importBtn.onclick = showWatchlistImport;
-    const goalInput = document.getElementById('income-goal');
-    if (goalInput) goalInput.onchange = () => {
-      const v = Number(goalInput.value);
-      if (isFinite(v) && v >= 0) {
-        localStorage.setItem('fp_income_goal', String(v));
-        if (calendarData) renderCalendarBody(calendarData);
-      }
-    };
   }
 
   async function showWatchlistImport() {
@@ -929,14 +1278,19 @@
         `<div class="toolbar" id="next-actions" style="margin:14px 0">
            <span class="muted" style="font-size:13px">接下来：</span>
            <button class="ghost" id="na-ledger">💰 算算这些年分到多少钱</button>
+           <button class="ghost" id="na-quality">🛡 分红质量：现金流覆盖 / 分红率 / 连续性</button>
            <button class="ghost" id="na-export">⬇ 导出 Excel 表格</button>
          </div>` +
+        `<div id="quality-panel"></div>` +
         renderStability(data);
       if (data.disclaimer) document.getElementById('disclaimer').textContent = data.disclaimer;
       const naLedger = document.getElementById('na-ledger');
       const naExport = document.getElementById('na-export');
+      const naQuality = document.getElementById('na-quality');
       if (naLedger) naLedger.onclick = openLedger;
       if (naExport) naExport.onclick = exportCsv;
+      if (naQuality) naQuality.onclick = openQuality;
+      bindDiagnoseButtons(result);
       if (ledgerOpen) scheduleLedgerRefresh();
       scheduleCalendarRefresh();
     } catch (err) {

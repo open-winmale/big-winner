@@ -383,6 +383,21 @@ tfoot td { border-top: 1px solid var(--line-strong); font-weight: 620; backgroun
 #result { scroll-margin-top: 70px; }
 #positions-card { scroll-margin-top: 70px; }
 .xray-table td:first-child, .xray-table td:nth-child(2) { white-space: nowrap; }
+.xray-table th:last-child, .xray-table td.cell-action { white-space: nowrap; }
+button.link { white-space: nowrap; }
+
+/* 分红持续性分析按钮：胶囊 + 脉搏图标 */
+.btn-analyze {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent-hover);
+  border: 1px solid #bfdbfe; font-size: 12px; font-weight: 600;
+  white-space: nowrap; transition: all .15s ease;
+}
+.btn-analyze:hover {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.btn-analyze svg { flex: none; }
 .scroll-box {
   max-height: 420px; overflow: auto;
   border: 1px solid var(--line); border-radius: var(--radius-sm);
@@ -429,22 +444,6 @@ tfoot td { border-top: 1px solid var(--line-strong); font-weight: 620; backgroun
 .calendar-tabs button.active {
   background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
 }
-.goal-row {
-  margin-top: 14px; padding: 12px 14px;
-  border: 1px solid var(--line); border-radius: var(--radius-sm);
-  background: var(--surface-2);
-}
-.goal-line {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-  font-size: 12.5px; color: var(--text-2);
-}
-.goal-line input { width: 110px; padding: 5px 8px; font-size: 12.5px; }
-.goal-line .goal-num { color: var(--text); font-weight: 620; font-variant-numeric: tabular-nums; }
-.progress {
-  height: 8px; background: var(--line); border-radius: 999px;
-  overflow: hidden; margin-top: 8px;
-}
-.progress > span { display: block; height: 100%; background: var(--accent); }
 .event-groups { margin-top: 12px; }
 .event-group { margin-top: 12px; }
 .event-group h3 {
@@ -459,7 +458,7 @@ tfoot td { border-top: 1px solid var(--line-strong); font-weight: 620; backgroun
   max-height: 380px; overflow-y: auto;
 }
 .event-row {
-  display: grid; grid-template-columns: 92px 1.25fr 1fr 126px;
+  display: grid; grid-template-columns: 92px 1.25fr 1fr 126px 110px;
   gap: 10px; align-items: center;
   padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px;
 }
@@ -469,6 +468,7 @@ tfoot td { border-top: 1px solid var(--line-strong); font-weight: 620; backgroun
 .event-row .name { font-weight: 620; }
 .event-row .meta { color: var(--text-3); font-size: 11.5px; margin-top: 2px; line-height: 1.5; }
 .event-row .amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.event-row .actions { text-align: right; white-space: nowrap; }
 .stage {
   display: inline-block; padding: 1px 7px; border-radius: 999px;
   font-size: 11px; border: 1px solid var(--line-strong);
@@ -488,6 +488,108 @@ tfoot td { border-top: 1px solid var(--line-strong); font-weight: 620; backgroun
   padding: 12px; color: var(--text-2); font-size: 12.5px;
 }
 
+/* ---------------- 分红质量卡 ---------------- */
+.quality-table { min-width: 1080px; }
+.quality-table tbody tr.quality-row { cursor: pointer; }
+.quality-table tbody tr.quality-detail > td {
+  background: var(--surface-2); padding: 14px 16px;
+}
+.quality-detail-body h4 {
+  margin: 10px 0 4px; font-size: 12.5px; color: var(--text-2);
+}
+.quality-detail-body h4:first-child { margin-top: 0; }
+.quality-cols {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+.quality-detail-body table { font-size: 12.5px; }
+.quality-detail-body th, .quality-detail-body td { padding: 4px 8px; }
+
+/* ---------------- 诊股弹层（分红持续性分析） ---------------- */
+.diag-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(15, 23, 42, .45);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 48px 16px; overflow-y: auto;
+}
+.diag-modal {
+  width: min(860px, 100%);
+  max-height: calc(100vh - 96px); overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, .25);
+}
+.diag-sec {
+  margin: 16px 0 6px; font-size: 12.5px; color: var(--text-2);
+}
+
+/* 分项条（现金流/分红率/负债/稳定）——按得分率填充 */
+.diag-bars { display: grid; gap: 10px; margin-top: 8px; }
+.diag-bar-row { display: grid; grid-template-columns: 150px 1fr 64px; gap: 4px 12px; align-items: center; }
+.diag-bar-label { font-size: 12.5px; color: var(--text-2); white-space: nowrap; }
+.diag-bar-track {
+  position: relative; height: 14px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 999px; overflow: hidden;
+}
+.diag-bar-fill { display: block; height: 100%; border-radius: 999px; }
+.diag-bar-fill.good { background: var(--accent); }
+.diag-bar-fill.ok { background: var(--accent); opacity: .72; }
+.diag-bar-fill.bad { background: var(--up); }
+.diag-bar-score {
+  font-size: 11.5px; color: var(--text-2); text-align: right;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.diag-bar-note { grid-column: 2 / 4; font-size: 11.5px; color: var(--text-3); }
+
+/* 覆盖条（1.0x 基线） */
+.diag-cov { display: grid; gap: 12px; margin-top: 8px; }
+.diag-cov-row {
+  display: grid; grid-template-columns: 150px 1fr 64px;
+  gap: 4px 12px; align-items: center;
+}
+.diag-cov-track {
+  position: relative; height: 14px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 999px; overflow: hidden;
+}
+.diag-cov-fill { display: block; height: 100%; border-radius: 999px; }
+.diag-cov-fill.good { background: var(--accent); }
+.diag-cov-fill.ok { background: var(--accent); opacity: .7; }
+.diag-cov-fill.bad { background: var(--up); }
+.diag-cov-mark {
+  position: absolute; top: -2px; bottom: -2px; width: 2px;
+  background: var(--text); opacity: .55;
+}
+.diag-cov-val { font-size: 13px; font-weight: 620; font-variant-numeric: tabular-nums; }
+.diag-cov-val.bad-text { color: var(--up); }
+.bad-text { color: var(--up); }
+
+/* 近 5 年分红柱状图（纯 CSS） */
+.diag-chart {
+  display: flex; align-items: flex-end; gap: 14px;
+  height: 150px; padding: 8px 4px 0;
+  border-bottom: 1px solid var(--line-strong);
+}
+.diag-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.diag-col-bars {
+  display: flex; align-items: flex-end; justify-content: center; gap: 6px;
+  flex: 1;
+}
+.diag-col-bar {
+  width: 26px; border-radius: 4px 4px 0 0; position: relative;
+  min-height: 2px;
+}
+.diag-col-bar.payout { background: var(--accent); }
+.diag-col-bar.dps { background: var(--down); opacity: .8; }
+.diag-col-val {
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: var(--text-2); white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.diag-col-year {
+  text-align: center; font-size: 11.5px; color: var(--text-3);
+  padding-top: 6px; font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 720px) {
   .wrap { padding: 0 14px 48px; }
   .page-head h1 { font-size: 22px; }
@@ -497,4 +599,25 @@ tfoot td { border-top: 1px solid var(--line-strong); font-weight: 620; backgroun
   .holdings-bulk { align-items: flex-start; }
   .event-row { grid-template-columns: 78px 1fr; }
   .event-row .amount { text-align: left; }
+  .event-row .actions { text-align: left; }
+  .diag-cov-row { grid-template-columns: 110px 1fr 56px; }
+  .diag-bar-row { grid-template-columns: 110px 1fr 56px; }
+  .diag-bar-note { grid-column: 1 / 4; }
+}
+
+/* ---------------- 移动端：弹层与可视化 ---------------- */
+@media (max-width: 720px) {
+  .diag-overlay { padding: 10px 8px; align-items: stretch; }
+  .diag-modal {
+    max-height: none; padding: 14px;
+    width: 100%;
+  }
+  .diag-modal .kpis { grid-template-columns: repeat(2, 1fr); }
+  .diag-bars, .diag-cov { gap: 8px; }
+  .diag-chart { gap: 8px; height: 120px; }
+  .diag-col-bar { width: 16px; }
+  .diag-col-val { font-size: 9px; top: -14px; }
+  .diag-bar-label { font-size: 11.5px; white-space: normal; }
+  .diag-cov-val { font-size: 12px; }
+  .diag-modal .event-row { grid-template-columns: 70px 1fr; }
 }
