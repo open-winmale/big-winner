@@ -22,9 +22,11 @@ class FinpipeBiglyData:
     demo = False
 
     def __init__(self, client: Any | None = None):
-        import finpipe
+        if client is None:  # 注入桩客户端时零 finpipe 依赖（离线测试可用）
+            import finpipe
 
-        self._cli = client or finpipe.Client.from_env()
+            client = finpipe.Client.from_env()
+        self._cli = client
         try:
             self._cli.max_limit = max(self._cli.max_limit or 0, 800)
         except TypeError:  # max_limit=None 表示不限
