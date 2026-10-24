@@ -151,20 +151,16 @@ def test_using_trial_key_env_fallback(monkeypatch):
     assert using_trial_key(Cli()) is False
 
 
-def test_fetcher_uses_trial_key(monkeypatch):
-    """自有凭证 → False；体验凭证 → True（比对 finpipe 内部体验凭证）。"""
+def test_fetcher_uses_trial_key():
+    """自有凭证 → False；体验凭证 → True（精确比对依赖 finpipe，回退路径另有专测）。"""
+    pytest.importorskip("finpipe")
     from bigwinner.common.fetchers import FinpipeFetcher, using_trial_key
+    from finpipe._experience import credentials as _exp
 
     class Cli:
         def __init__(self, cid):
             self.client_id = cid
 
-    monkeypatch.delenv("FINPIPE_CLIENT_ID", raising=False)
-    monkeypatch.delenv("OPEN_PLATFORM_CLIENT_ID", raising=False)
-    own = FinpipeFetcher(client=Cli("my-own"), hk_client=object())
-    assert own.uses_trial_key() is False
-    pytest.importorskip("finpipe")
-    from finpipe._experience import credentials as _exp
-    trial = FinpipeFetcher(client=Cli(_exp()[0]), hk_client=object())
-    assert trial.uses_trial_key() is True
+    assert FinpipeFetcher(client=Cli("my-own"), hk_client=object()).uses_trial_key() is False
+    assert FinpipeFetcher(client=Cli(_exp()[0]), hk_client=object()).uses_trial_key() is True
     assert using_trial_key(Cli("other")) is False
