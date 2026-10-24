@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.3.0 — 2026-10-24
+
+### Added
+
+- **总览页工具贴图**：`/` 的两张工具卡片各嵌入一张应用主内容截图（demo 模式截取，
+  `assets/shot-dividend-xray.png` / `shot-bigly.png`，16:10 裁切），`/assets/` 支持
+  png；同时移除总览页两个「规划中」占位卡，首页只呈现可用工具。
+- **单端口门户**：`python -m bigwinner.shouxi`（:8787）的 `/` 工具总览页现在同时
+  覆盖收息佬与必赢佬——总览页加必赢佬卡片，`/tools/bigly/`、`/api/bigly/*`
+  由收息佬进程直接挂载（复用必赢佬的纯函数 API，页面文件仍在必赢佬包内）。
+  README 的 `/tools/bigly/` 相对链接在门户端口下真正生效；一条命令即可用上
+  全部小工具。`python -m bigwinner.bigly`（:8788）独立入口原样保留，互不影响。
+- demo 模式联动：门户 `--demo` 时必赢佬自动使用 `DemoBiglyData`；真实模式使用
+  `FinpipeBiglyData`，取数实例首次请求时才构造，未装 finpipe 不影响启动。
+
+### Changed
+
+- `TOOLS` 注册表支持可选 `web_dir` 键（页面不在收息佬包 web/ 下时指到别处），
+  `/api/tools` 输出继续隐藏 `page`/`web_dir` 内部键。
+
 ## 1.2.1 — 2026-10-24
 
 ### Added

@@ -346,6 +346,12 @@ tfoot td { border-top: 1px solid var(--line-strong); font-weight: 620; backgroun
   transition: transform .15s ease, border-color .15s ease;
 }
 .tool-card:hover { transform: translateY(-2px); border-color: var(--line-strong); text-decoration: none; }
+.tool-card .tool-shot {
+  display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover;
+  object-position: top; margin: 0 0 14px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
 .tool-card h3 { margin: 0 0 6px; font-size: 16px; font-weight: 620; }
 .tool-card p { margin: 0 0 12px; color: var(--text-2); font-size: 13px; }
 

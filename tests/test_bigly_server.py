@@ -170,9 +170,11 @@ def test_symbols_search_empty_query(base_url):
     assert status == 200 and body["results"] == []
 
 
-def test_shouxi_server_module_untouched():
-    """双工具隔离：收息佬模块照常导入，且必赢佬不在其 TOOLS 注册表里。"""
+def test_shouxi_portal_registry():
+    """单端口门户：必赢佬已注册进收息佬 TOOLS，页面文件仍在必赢佬包内。"""
     import bigwinner.shouxi.server as srv
 
     assert "dividend-xray" in srv.TOOLS
-    assert "bigly" not in srv.TOOLS
+    entry = srv.TOOLS["bigly"]
+    assert entry["page"] == "bigly.html"
+    assert (srv.Path(entry["web_dir"]) / "bigly.html").is_file()

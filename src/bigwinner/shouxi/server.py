@@ -1,5 +1,8 @@
 """单端口 Web 服务：每个小工具一个独立 HTML 页 + 一个 JSON 计算接口。
 
+`/` 是工具总览页；收息佬与必赢佬都挂在本进程（必赢佬另保留独立入口
+`python -m bigwinner.bigly` :8788，二者互不影响）。
+
 启动：
     PYTHONPATH=src python -m bigwinner.server              # 真实取数（需 finpipe）
     PYTHONPATH=src python -m bigwinner.server --demo       # 内置样例数据，无需凭证
@@ -21,6 +24,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from bigwinner.bigly import server as bigly_srv
 from bigwinner.common import fetchers
 from bigwinner.common.export import xray_csv
 from bigwinner.common.symbols import SymbolDirectory
@@ -32,12 +36,19 @@ from bigwinner.shouxi.tools import ledger as ledger_mod
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
-#: 工具注册表：新增工具只需在这里加一条 + 一个 HTML + 一个 handler
+#: 工具注册表：新增工具只需在这里加一条 + 一个 HTML + 一个 handler；
+#: 页面不在本包 web/ 下时，用 web_dir 指到别处（如必赢佬）
 TOOLS: dict[str, dict[str, str]] = {
     "dividend-xray": {
         "title": "收息佬",
         "tagline": "攒股收息驾驶舱：分红日历 · 持续性分析 · 税后记账",
         "page": "dividend_xray.html",
+    },
+    "bigly": {
+        "title": bigly_srv.TOOL_META["title"],
+        "tagline": bigly_srv.TOOL_META["tagline"],
+        "page": "bigly.html",
+        "web_dir": str(bigly_srv.WEB_DIR),
     },
 }
 
@@ -94,6 +105,17 @@ DIRECTORY = SymbolDirectory()
 STORE = Store()
 WATCHLIST = WatchlistSync()
 SCREENER = StockScreener()
+
+_BIGLY_DATA: Any = None
+
+
+def bigly_data() -> Any:
+    """必赢佬的取数实例，首次请求时才构造（demo→罐头数据，真实→finpipe SDK），
+    未安装 finpipe 不影响服务启动。"""
+    global _BIGLY_DATA
+    if _BIGLY_DATA is None:
+        _BIGLY_DATA = bigly_srv.build_data(RUNTIME.demo)
+    return _BIGLY_DATA
 
 
 def _demo_data() -> dict[str, Any]:
@@ -807,6 +829,9 @@ HANDLERS = {
     "diagnose": run_diagnose,
     "key-status": key_status,
     "key-save": key_save,
+    # 必赢佬：复用其纯函数 API，data 用本进程的惰性实例
+    "bigly/channel": lambda payload: bigly_srv.run_channel(bigly_data(), payload),
+    "bigly/backtest": lambda payload: bigly_srv.run_backtest(bigly_data(), payload),
 }
 
 
@@ -853,10 +878,11 @@ class Handler(BaseHTTPRequestHandler):
             if not tool:
                 self._send(404, b"<h1>404</h1>", "text/html; charset=utf-8")
                 return
-            self._send_html(WEB_DIR / tool["page"])
+            self._send_html(Path(tool.get("web_dir", WEB_DIR)) / tool["page"])
         elif route == "/api/tools":
             self._send_json(200, {"tools": [
-                {"slug": s, **{k: v for k, v in t.items() if k != "page"}}
+                {"slug": s, **{k: v for k, v in t.items()
+                               if k not in ("page", "web_dir")}}
                 for s, t in TOOLS.items()
             ], "demo": RUNTIME.demo})
         elif route == "/api/symbols":
@@ -867,6 +893,17 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {"results": DIRECTORY.search(q, market, limit=8),
                                   "total": len(DIRECTORY),
                                   "as_of": DIRECTORY.freshness(market)})
+        elif route == "/api/bigly/symbols":  # 必赢佬页面的取码接口，同 DIRECTORY
+            from urllib.parse import parse_qs
+            query = urlparse(self.path).query
+            q = (parse_qs(query).get("q") or [""])[0]
+            market = (parse_qs(query).get("market") or ["cn"])[0]
+            self._send_json(200, {"results": DIRECTORY.search(q, market, limit=8),
+                                  "total": len(DIRECTORY),
+                                  "as_of": DIRECTORY.freshness(market)})
+        elif route == "/api/bigly/meta":
+            self._send_json(200, {"tool": bigly_srv.TOOL_META,
+                                  "demo": getattr(bigly_data(), "demo", False)})
         elif route == "/api/health":
             self._send_json(200, {"ok": True, "demo": RUNTIME.demo,
                                   "time": datetime.now().isoformat(timespec="seconds")})
@@ -908,8 +945,9 @@ class Handler(BaseHTTPRequestHandler):
         if not path.exists():
             self._send(404, b"", "text/plain")
             return
-        ctype = "text/css; charset=utf-8" if path.suffix == ".css" else \
-            "application/javascript; charset=utf-8"
+        ctype = {"css": "text/css; charset=utf-8",
+                 "png": "image/png"}.get(path.suffix.lstrip("."),
+                                          "application/javascript; charset=utf-8")
         self._send(200, path.read_bytes(), ctype)
 
     # ---- POST ----
