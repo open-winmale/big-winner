@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
 
@@ -32,6 +33,11 @@ def _get_text(url):
         return r.status, r.read().decode("utf-8")
 
 
+def _get_json(url):
+    with urllib.request.urlopen(url, timeout=5) as r:
+        return r.status, json.loads(r.read().decode("utf-8"))
+
+
 def _post(url, payload):
     req = urllib.request.Request(
         url, data=json.dumps(payload).encode("utf-8"),
@@ -46,18 +52,13 @@ def _post(url, payload):
 def test_screener_page_served(base_url):
     status, html = _get_text(base_url + "/tools/screener/")
     assert status == 200
-    assert "筛选" in html and "开始过筛" in html
+    assert "筛选" in html and "开始选股" in html and "格雷厄姆" in html
 
 
 def test_index_lists_screener(base_url):
     status, html = _get_text(base_url + "/")
     assert status == 200
-    assert "筛选" in html and "/tools/screener/" in html
-
-
-def _get_json(url):
-    with urllib.request.urlopen(url, timeout=5) as r:
-        return r.status, json.loads(r.read().decode("utf-8"))
+    assert "/tools/screener/" in html
 
 
 def test_api_tools_lists_screener_without_internal_keys(base_url):
@@ -68,45 +69,55 @@ def test_api_tools_lists_screener_without_internal_keys(base_url):
     assert "page" not in entry and "web_dir" not in entry
 
 
-def test_api_screener_demo_run(base_url):
-    status, body = _post(base_url + "/api/screener", {"symbol": "600519"})
+def test_api_screener_high_yield_demo(base_url):
+    status, body = _post(base_url + "/api/screener", {"strategy": "high_yield_3"})
     assert status == 200
     assert body["demo"] is True
-    assert body["symbol"] == "600519"
-    assert body["conditions"] == srv.scr.DEFAULT_CONDITIONS
-    assert body["checks"]["yield_ge3"] is True
-    assert body["passed"] is True
+    assert body["strategy"]["id"] == "high_yield_3"
+    assert body["columns"][0]["key"] == "$BONUS_RATE_TTM_LAST"
+    assert body["rows"]
+    for row in body["rows"]:
+        assert row["values"]["$BONUS_RATE_TTM_LAST"] >= 0.03
     assert "disclaimer" in body
 
 
-def test_api_screener_custom_conditions(base_url):
-    status, body = _post(base_url + "/api/screener",
-                         {"symbol": "000858",
-                          "conditions": ["yield_ge3", "stable_yield"]})
+def test_api_screener_graham_demo(base_url):
+    status, body = _post(base_url + "/api/screener", {"strategy": "graham"})
     assert status == 200
-    assert set(body["checks"]) == {"yield_ge3", "stable_yield"}
-    assert body["checks"]["stable_yield"] is True
-    assert body["metrics"]["payout_ttm"] is None or isinstance(
-        body["metrics"]["payout_ttm"], float)
+    assert body["rows"]
+    for row in body["rows"]:
+        assert row["values"]["$PE_TTM_LAST"] < 15
+        assert row["values"]["$PB_TTM_LAST"] < 1.5
+    pe_list = [r["values"]["$PE_TTM_LAST"] for r in body["rows"]]
+    assert pe_list == sorted(pe_list)                    # PE 升序
 
 
-def test_api_screener_rejects_non_a_share(base_url):
-    for bad in ("AAPL", "00700", "6005190"):
-        status, body = _post(base_url + "/api/screener", {"symbol": bad})
+def test_api_screener_custom_demo(base_url):
+    status, body = _post(base_url + "/api/screener",
+                         {"custom": {"yield_gte": "3", "pe_lt": "15"}, "limit": 30})
+    assert status == 200
+    assert body["strategy"]["id"] == "custom"
+    assert body["limit"] == 30
+    for row in body["rows"]:
+        assert row["values"]["$BONUS_RATE_TTM_LAST"] >= 0.03
+        assert row["values"]["$PE_TTM_LAST"] < 15
+
+
+def test_api_screener_limit_clamped(base_url):
+    status, body = _post(base_url + "/api/screener",
+                         {"strategy": "high_yield_3", "limit": 9999})
+    assert status == 200
+    assert body["limit"] == 200
+
+
+def test_api_screener_rejects_unknown_strategy(base_url):
+    for bad in ("nope", None):
+        status, body = _post(base_url + "/api/screener", {"strategy": bad})
         assert status == 400
-        assert "A 股 6 位" in body["error"]
+        assert "未知策略" in body["error"]
 
 
-def test_api_screener_rejects_unknown_condition(base_url):
-    status, body = _post(base_url + "/api/screener",
-                         {"symbol": "600519", "conditions": ["nope"]})
+def test_api_screener_rejects_empty_custom(base_url):
+    status, body = _post(base_url + "/api/screener", {"custom": {}})
     assert status == 400
-    assert "未知条件" in body["error"]
-
-
-def test_api_screener_failed_stock_reports_breakpoint(base_url):
-    status, body = _post(base_url + "/api/screener", {"symbol": "688981"})
-    assert status == 200
-    assert body["passed"] is False
-    assert len(body["failed"]) == 3
-    assert all({"id", "name", "column", "value"} <= set(f) for f in body["failed"])
+    assert "至少填一个条件" in body["error"]

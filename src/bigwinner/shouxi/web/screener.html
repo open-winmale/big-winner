@@ -10,41 +10,55 @@
     color:#b91c1c;padding:10px 14px;border-radius:8px;margin:12px 0;font-size:13.5px;
     font-weight:650}
   .banner b{font-weight:750}
-  .sym-input{width:100%;padding:10px 12px;font-size:15px;border:1px solid var(--line-strong);
-    border-radius:8px;font-variant-numeric:tabular-nums;letter-spacing:.04em}
-  .sym-input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
-  .run-btn{padding:10px 22px;font-size:14.5px;font-weight:650;border:none;border-radius:8px;
-    background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}
+  .strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  @media (max-width:768px){.strat-grid{grid-template-columns:1fr}}
+  .strat{border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;
+    background:var(--surface);text-align:left;font:inherit;color:inherit;
+    transition:border-color .15s, box-shadow .15s}
+  .strat:hover{border-color:var(--line-strong)}
+  .strat.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .strat h3{margin:0;font-size:14.5px;font-weight:650;display:flex;align-items:center;
+    gap:8px;flex-wrap:wrap}
+  .strat p{margin:6px 0 0;font-size:12.5px;color:var(--text-2);line-height:1.55}
+  .strat .tags{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--surface-2);
+    color:var(--text-3)}
+  .tag.accent{background:var(--accent-soft);color:var(--accent-hover)}
+  .custom-panel{display:none;border:1px dashed var(--line-strong);border-radius:10px;
+    padding:12px 14px;margin-top:12px;font-size:13.5px}
+  .custom-panel.show{display:block}
+  .mini-input{width:110px;padding:6px 8px;font-size:13px}
+  .mini-input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .run-row{display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap}
+  .run-btn{padding:9px 22px;font-size:14.5px;font-weight:650;border:none;border-radius:8px;
+    background:var(--accent);color:#fff;cursor:pointer}
   .run-btn:hover{background:var(--accent-hover)}
   .run-btn:disabled{opacity:.5;cursor:default}
-  .hint{font-size:12.5px;color:var(--text-3);margin:8px 0 0;min-height:18px}
-  .hint.warn{color:#b45309}
-  .hint.bad{color:#dc2626}
-  .conds{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;margin-top:14px}
-  @media (max-width:768px){.conds{grid-template-columns:1fr}}
-  .group-title{font-size:13px;font-weight:650;color:var(--text-2);margin:10px 0 2px;
-    grid-column:1 / -1}
-  .cond{display:flex;gap:8px;align-items:baseline;font-size:13.5px;padding:3px 0;cursor:pointer}
-  .cond input{flex:none;transform:translateY(1px)}
-  .cond b{font-weight:620;white-space:nowrap}
-  .cond .intro{color:var(--text-3);font-size:12.5px}
-  .result-sum{font-size:13.5px;color:var(--text-2);margin:0 0 10px}
+  select.topn{width:auto;padding:7px 10px;font-size:13.5px}
+  .quota{font-size:12.5px;color:var(--text-3)}
+  .result-sum{font-size:13.5px;color:var(--text-2);margin:0 0 10px;display:flex;
+    gap:10px;align-items:center;flex-wrap:wrap}
   .result-sum b.pass{color:var(--accent)}
+  .sum-btn{font-size:12.5px;padding:4px 12px;border-radius:99px;border:1px solid var(--line-strong);
+    background:var(--surface);cursor:pointer}
+  .sum-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .table-scroll{overflow-x:auto}
   .grid{width:100%;border-collapse:collapse;font-size:13.5px}
   .grid th,.grid td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;
     white-space:nowrap}
-  .grid th:first-child,.grid td:first-child{text-align:left}
+  .grid th:first-child,.grid td:first-child,.grid th:nth-child(2),.grid td:nth-child(2){
+    text-align:left}
   .grid th{color:var(--text-3);font-weight:600;border-bottom:1px solid var(--line-strong)}
-  .grid th.on{color:var(--accent-hover);background:var(--accent-soft)}
   .grid td.name{color:var(--text-2)}
-  .up{color:var(--up)} .down{color:var(--down)}
-  .danger{color:#dc2626;font-weight:650}
-  .ok-mark{color:var(--accent);font-weight:700}
-  .no-mark{color:var(--text-3)}
+  .grid td.code{cursor:pointer}
+  .grid td.code:hover{color:var(--accent)}
+  .ok-mark{color:var(--accent)}
   .loading{color:var(--text-3)}
-  details.failed-box{margin-top:14px}
-  details.failed-box summary{cursor:pointer;font-size:13px;color:var(--text-2)}
   .empty{color:var(--text-3);font-size:13.5px;padding:18px 0;text-align:center}
+  .degrade{border:1px solid #fcd34d;background:#fffbeb;border-radius:10px;padding:12px 14px;
+    font-size:13px;color:#92400e;line-height:1.7}
+  .toast{font-size:12.5px;color:var(--text-2);margin-top:8px;min-height:16px}
+  .toast.bad{color:#dc2626}
   .foot-note{color:#64748b;font-size:12.5px;margin-top:16px;line-height:1.7}
   #trial-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99;
     display:flex;align-items:center;justify-content:center}
@@ -69,311 +83,305 @@
 
 <main class="wrap">
 
-  <div class="banner">⚠️ <b>免责声明：</b>本工具输出条件筛选的<b>事实结果</b>，不构成任何投资建议；
-    通过筛选 <b>≠</b> 推荐买入，观察与决策由你自己负责。</div>
+  <div class="banner">⚠️ <b>免责声明：</b>选股结果为<b>事实性筛选</b>，不构成任何投资建议；
+    <b>选股 ≠ 推荐</b>，买卖决策由你自己负责。</div>
 
   <div class="page-head">
     <h1>筛选 <span style="font-size:15px;color:#64748b">screener</span></h1>
-    <p>粘贴代码 · 回车过筛 —— 每个条件一句话讲清楚，每个数字摆给你看。仅 A 股，一次最多 10 只。</p>
+    <p>预置策略 · 一键全市场 —— 格雷厄姆、高股息等策略一句话讲清口径，
+       选股清单的数字就是入选证据。</p>
   </div>
 
-  <!-- 输入与条件 -->
+  <!-- 策略 -->
   <section class="card">
-    <div style="display:flex;gap:12px;align-items:center">
-      <input id="codes" class="sym-input" spellcheck="false" autocomplete="off"
-             placeholder="粘贴 6 位代码，逗号 / 空格 / 换行分隔，如：600519, 601318, 000858">
-      <button id="run" class="run-btn">开始过筛</button>
-    </div>
-    <div id="parse-hint" class="hint"></div>
+    <div class="strat-grid" id="strat-grid"></div>
 
-    <div class="conds" id="conds">
-      <div class="group-title">息 —— 分红本身好不好</div>
-      <label class="cond"><input type="checkbox" data-cond="yield_ge3" checked>
-        <b>股息率 ≥ 3%</b><span class="intro">TTM 口径，与平台高股息池一致</span></label>
-      <label class="cond"><input type="checkbox" data-cond="payout_30_70" checked>
-        <b>派息率 30%–70%</b><span class="intro">分红拿得出、留得住；超 100% 危险</span></label>
-      <label class="cond"><input type="checkbox" data-cond="div_years_ge3" checked>
-        <b>连续分红 ≥ 3 年</b><span class="intro">近年未断供（完整财年口径）</span></label>
-      <label class="cond"><input type="checkbox" data-cond="stable_yield">
-        <b>股息稳定</b><span class="intro">数据源判定，口径未公开</span></label>
-      <div class="group-title">势 —— 现在的走势与位置</div>
-      <label class="cond"><input type="checkbox" data-cond="above_ma20">
-        <b>站上 MA20</b><span class="intro">现价高于 20 日均线（前复权）</span></label>
-      <label class="cond"><input type="checkbox" data-cond="ma60_up">
-        <b>MA60 上行</b><span class="intro">中期趋势向上（60 日均线今高于昨）</span></label>
-      <label class="cond"><input type="checkbox" data-cond="chg20_le10">
-        <b>近 20 日涨幅 ≤ 10%</b><span class="intro">未被短线爆炒</span></label>
+    <div class="custom-panel" id="custom-panel">
+      条件可留空，至少填一项；同一策略内条件为 AND 关系。<br>
+      <label>股息率 ≥ <input id="c-yield" class="mini-input" inputmode="decimal"
+        placeholder="如 3 或 0.03"> %</label>
+      <label style="margin-left:16px">PE(TTM) ≤ <input id="c-pe" class="mini-input"
+        inputmode="decimal" placeholder="如 15"></label>
+      <label style="margin-left:16px">市净率 ≤ <input id="c-pb" class="mini-input"
+        inputmode="decimal" placeholder="如 1.5"></label>
+      <div id="custom-hint" class="toast"></div>
     </div>
-    <div id="quota-hint" class="hint"></div>
+
+    <div class="run-row">
+      <span>数量
+        <select id="topn" class="topn">
+          <option>30</option><option selected>50</option>
+          <option>100</option><option>200</option>
+        </select>
+      </span>
+      <button id="run" class="run-btn">开始选股</button>
+      <span id="quota" class="quota"></span>
+    </div>
+    <div id="run-hint" class="toast"></div>
   </section>
 
   <!-- 结果 -->
   <section class="card" style="margin-top:16px">
     <div id="result-sum" class="result-sum"></div>
-    <div id="result-body"><div class="empty">粘贴代码后回车，结果会出现在这里</div></div>
-    <details class="failed-box" id="failed-box" hidden>
-      <summary id="failed-summary">未通过的股票</summary>
-      <div id="failed-body" style="margin-top:8px"></div>
-    </details>
+    <div id="result-body"><div class="empty">选一张策略卡，点「开始选股」</div></div>
+    <div id="result-actions" style="margin-top:10px"></div>
+    <div id="push-toast" class="toast"></div>
     <div class="foot-note">
-      「—」为取数缺失（不冒充不通过）；事件停牌、ETF 与部分新股部分字段可能缺失。
-      每票约 3–4 次查询；通过筛选不构成推荐，深度体检请用「收息佬 · 分红质量」。
+      「—」为取数缺失；结果按所选策略口径排序。全市场通道与平台 web「选股」同源
+      （需已配置 wm.sh；未配置时页面会如实提示）。选股结果 ≠ 推荐；
+      深度体检请用「收息佬 · 分红质量 / 持续性分析」。
     </div>
   </section>
 
   <div class="footer">
-    <div>数据来自 finpipe（A 股口径）；历史筛选结果不代表未来；最终以上市公司公告为准。</div>
+    <div>数据来自平台选股引擎与 finpipe；历史筛选结果不代表未来；最终以上市公司公告为准。</div>
   </div>
 </main>
 
 <script>
 "use strict";
-var MAX_SYMBOLS = 10;
 var $ = function (id) { return document.getElementById(id); };
 
-var PCT_KEYS = { yield_ttm: 2, payout_ttm: 2, dist_ma20: 2, chg20d: 2 };
+var STRATS = [
+  { id: "high_yield_3", name: "高股息 ≥3%", market: "A 股",
+    intro: "TTM 股息率不低于 3%，与平台高股息池同口径" },
+  { id: "high_yield_6", name: "高股息 ≥6%", market: "A 股",
+    intro: "TTM 股息率不低于 6%，深度高息——警惕价值陷阱，入选后先做体检" },
+  { id: "graham", name: "格雷厄姆（简化）", market: "A 股",
+    intro: "PE(TTM)<15 且市净率<1.5，经典价值派安全边际筛（蕴含 PE×PB<22.5）" },
+  { id: "cheap_income", name: "低估值高息", market: "A 股",
+    intro: "PE(TTM)<15 且股息率≥3%，低估值与现金流的交集" },
+  { id: "below_pb", name: "破净股", market: "A 股",
+    intro: "市净率低于 1，市值低于净资产——注意资产质量，入选后先做体检" },
+  { id: "payout_30_70", name: "派息率 30%–70%", market: "A 股",
+    intro: "分红拿得出、留得住的健康区间（口径同分红质量方法论）" },
+  { id: "high_yield_hk", name: "港股高息 ≥6%", market: "港股",
+    intro: "港股通红利税默认预扣 20%，6% 起步覆盖税后" },
+  { id: "custom", name: "自定义组合", market: "A 股",
+    intro: "按你填的阈值 AND 组合，全市场执行（股息率 / PE / 市净率）" },
+];
 
-function fmtValue(key, v) {
-  if (v === null || v === undefined) return "—";
-  if (key === "div_years") return String(v);
-  if (key === "close") return Number(v).toFixed(2);
-  if (key in PCT_KEYS) return (v * 100).toFixed(PCT_KEYS[key]) + "%";
-  if (typeof v === "boolean") return v ? "✓" : "✗";
-  return String(v);
-}
-function pctCell(key, v) {
-  var text = fmtValue(key, v);
-  if (v === null || v === undefined) return { text: text };
-  return { text: text, cls: v > 0 ? "up" : (v < 0 ? "down" : "") };
-}
+var sel = "high_yield_3";
+var lastResult = null;
+
 function esc(s) {
   return String(s).replace(/[&<>"]/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
   });
 }
 
-// ---- 代码解析：从任意粘贴文本提取 6 位数字串 ----
-function parseCodes(text) {
-  var seen = [], tokens = String(text).split(/[^0-9]+/);
-  tokens.forEach(function (t) {
-    if (t.length === 6 && seen.indexOf(t) < 0) seen.push(t);
+function renderCards() {
+  $("strat-grid").innerHTML = STRATS.map(function (s) {
+    return "<button type='button' class='strat" + (s.id === sel ? " sel" : "")
+      + "' data-id='" + s.id + "'>"
+      + "<h3>" + esc(s.name) + "</h3><p>" + esc(s.intro) + "</p>"
+      + "<div class='tags'><span class='tag'>" + esc(s.market) + "</span>"
+      + "<span class='tag'>平台选股 · 约 1 次查询</span></div></button>";
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll(".strat"), function (btn) {
+    btn.addEventListener("click", function () {
+      sel = btn.dataset.id;
+      renderCards();
+      $("custom-panel").classList.toggle("show", sel === "custom");
+      updateQuota();
+      save();
+    });
   });
-  return seen;
-}
-function selectedConds() {
-  return Array.prototype.map.call(
-    document.querySelectorAll("#conds input[type=checkbox]"),
-    function (cb) { return cb.checked ? cb.dataset.cond : null; }
-  ).filter(Boolean);
-}
-function callCount(n, conds) {
-  var per = 3 + (conds.indexOf("stable_yield") >= 0 ? 1 : 0);
-  return n * per;
-}
-function updateHints(rawText) {
-  var hint = $("parse-hint"), quota = $("quota-hint");
-  var codes = parseCodes(rawText || $("codes").value);
-  var conds = selectedConds();
-  if (!codes.length) {
-    hint.className = "hint";
-    hint.textContent = rawText ? "没有识别到 6 位代码" : "";
-  } else {
-    var cut = codes.length > MAX_SYMBOLS;
-    var shown = codes.slice(0, MAX_SYMBOLS);
-    hint.className = "hint" + (cut ? " warn" : "");
-    hint.textContent = "已识别 " + codes.length + " 只："
-      + shown.join(" · ") + (cut ? "（超出 " + MAX_SYMBOLS + " 只，已截取前 " + MAX_SYMBOLS + " 只）" : "");
-  }
-  quota.textContent = codes.length && conds.length
-    ? "本次约发起 " + callCount(Math.min(codes.length, MAX_SYMBOLS), conds) + " 次查询（每票 "
-      + callCount(1, conds) + " 次，趋势条件本地计算不耗额度）"
-    : (conds.length ? "" : "至少勾选一个条件");
+  $("custom-panel").classList.toggle("show", sel === "custom");
 }
 
-// ---- 过筛 ----
+function updateQuota() {
+  $("quota").textContent = "预计 1 次查询（top " + $("topn").value + "）";
+}
+
+function save() {
+  try {
+    localStorage.setItem("screener_v2", JSON.stringify({
+      sel: sel, topn: $("topn").value,
+      custom: { yield_gte: $("c-yield").value, pe_lt: $("c-pe").value,
+                pb_lt: $("c-pb").value },
+    }));
+  } catch (e) { /* 隐私模式忽略 */ }
+}
+
+function restore() {
+  try {
+    var saved = JSON.parse(localStorage.getItem("screener_v2") || "null");
+    if (!saved) return;
+    if (saved.sel && STRATS.some(function (s) { return s.id === saved.sel; })) sel = saved.sel;
+    if (saved.topn) $("topn").value = saved.topn;
+    if (saved.custom) {
+      $("c-yield").value = saved.custom.yield_gte || "";
+      $("c-pe").value = saved.custom.pe_lt || "";
+      $("c-pb").value = saved.custom.pb_lt || "";
+    }
+  } catch (e) { /* 忽略 */ }
+}
+
+// ---- 选股 ----
 var running = false;
 function run() {
   if (running) return;
-  var codes = parseCodes($("codes").value).slice(0, MAX_SYMBOLS);
-  var conds = selectedConds();
-  var hint = $("parse-hint");
-  if (!codes.length) {
-    hint.className = "hint bad";
-    hint.textContent = "没有识别到 6 位代码，请粘贴 A 股代码";
-    return;
+  var payload = { limit: parseInt($("topn").value, 10) || 50 };
+  if (sel === "custom") {
+    payload.custom = { yield_gte: $("c-yield").value, pe_lt: $("c-pe").value,
+                       pb_lt: $("c-pb").value };
+  } else {
+    payload.strategy = sel;
   }
-  if (!conds.length) {
-    hint.className = "hint bad";
-    hint.textContent = "至少勾选一个条件";
-    return;
-  }
-  try { localStorage.setItem("screener_v1", JSON.stringify(
-    { codes: $("codes").value, conds: conds })); } catch (e) { /* 隐私模式忽略 */ }
-
   running = true;
   $("run").disabled = true;
-  hint.className = "hint";
-  hint.textContent = "";
+  $("run-hint").textContent = "";
+  $("push-toast").textContent = "";
+  $("result-sum").textContent = "";
+  $("result-actions").innerHTML = "";
+  $("result-body").innerHTML = "<div class='empty loading'>全市场选股中…</div>";
+  save();
 
-  // 占位行：按输入顺序固定，谁先回来谁先填充
-  var done = 0;
-  var results = codes.map(function (code) { return { code: code, status: "loading" }; });
-  var body = $("result-body"), sum = $("result-sum");
-  body.innerHTML = "<table class='grid'><tbody>" + codes.map(function (code) {
-    return "<tr id='row-" + code + "'><td>" + code + "</td><td colspan='8' class='loading'>取数中…</td></tr>";
-  }).join("") + "</tbody></table>";
-  sum.textContent = "已回 0/" + codes.length;
-
-  function onDone() {
-    done += 1;
-    sum.textContent = "已回 " + done + "/" + codes.length;
-    if (done < codes.length) return;
-    render(results, conds);
+  fetch("/api/screener", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then(function (r) { return r.json(); }).then(function (data) {
+    lastResult = data;
+    render(data);
+  }).catch(function (exc) {
+    $("result-body").innerHTML = "<div class='degrade'>请求失败：" + esc(String(exc)) + "</div>";
+  }).finally(function () {
     running = false;
     $("run").disabled = false;
-  }
-
-  codes.forEach(function (code, i) {
-    fetch("/api/screener", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ symbol: code, conditions: conds }),
-    }).then(function (r) {
-      return r.json().then(function (data) { return { ok: r.ok, data: data }; });
-    }).then(function (resp) {
-      if (!resp.ok || resp.data.error) {
-        results[i] = { code: code, status: "error",
-                       message: (resp.data && resp.data.error) || "请求失败" };
-      } else {
-        results[i] = resp.data;
-      }
-      var row = $("row-" + code);
-      if (row) row.cells[1].textContent = results[i].status === "error"
-        ? results[i].message : (results[i].passed === true ? "✓ 已回"
-                               : results[i].passed === false ? "✗ 未过" : "数据不足");
-      onDone();
-    }).catch(function (exc) {
-      results[i] = { code: code, status: "error", message: String(exc) };
-      onDone();
-    });
   });
 }
 
-// ---- 最终渲染：通过列表（按股息率降序）+ 未通过折叠 ----
-var COLUMNS = [
-  { key: "yield_ttm", label: "股息率", cond: "yield_ge3" },
-  { key: "payout_ttm", label: "派息率", cond: "payout_30_70" },
-  { key: "div_years", label: "连续年数", cond: "div_years_ge3" },
-  { key: "close", label: "现价", cond: null },
-  { key: "dist_ma20", label: "距MA20", cond: "above_ma20" },
-  { key: "chg20d", label: "近20日涨幅", cond: "chg20_le10" },
-  { key: "stable", label: "股息稳定", cond: "stable_yield" },
-];
+function fmt(fmtKind, v) {
+  if (v === null || v === undefined) return "—";
+  if (fmtKind === "pct") return (v * 100).toFixed(2) + "%";
+  return Number(v).toFixed(2);
+}
 
-function render(results, conds) {
-  var passed = [], failed = [], insufficient = [];
-  results.forEach(function (r) {
-    if (r.status === "error") { insufficient.push(r); return; }
-    if (r.passed === true) passed.push(r);
-    else if (r.passed === false) failed.push(r);
-    else insufficient.push(r);
-  });
-  passed.sort(function (a, b) {
-    return (b.metrics.yield_ttm || -1) - (a.metrics.yield_ttm || -1);
-  });
-
-  var sum = $("result-sum");
-  sum.innerHTML = "通过 <b class='pass'>" + passed.length + "</b> · 未通过 "
-    + failed.length + " · 数据不足 " + insufficient.length
-    + "（按股息率降序；高亮列为本次勾选条件）";
-
-  var body = $("result-body");
-  if (!passed.length) {
-    body.innerHTML = "<div class='empty'>没有股票通过全部勾选条件</div>";
-  } else {
-    var head = "<tr><th>代码</th><th>名称</th>" + COLUMNS.map(function (col) {
-      return "<th" + (conds.indexOf(col.cond) >= 0 ? " class='on'" : "")
-        + ">" + col.label + "</th>";
-    }).join("") + "</tr>";
-    var rows = passed.map(function (r) {
-      var m = r.metrics || {};
-      var cells = COLUMNS.map(function (col) {
-        var v = m[col.key];
-        if (col.key === "payout_ttm" && v !== null && v !== undefined && v > 1.0) {
-          return "<td class='danger'>" + fmtValue(col.key, v) + " 危险</td>";
-        }
-        if (col.key === "dist_ma20" || col.key === "chg20d") {
-          var cell = pctCell(col.key, v);
-          return "<td" + (cell.cls ? " class='" + cell.cls + "'" : "") + ">"
-            + cell.text + "</td>";
-        }
-        if (col.key === "stable") {
-          return "<td>" + (v === true ? "<span class='ok-mark'>✓</span>"
-            : v === false ? "<span class='no-mark'>✗</span>" : "—") + "</td>";
-        }
-        return "<td>" + fmtValue(col.key, v) + "</td>";
-      }).join("");
-      return "<tr><td>" + esc(r.symbol) + "</td><td class='name'>"
-        + esc(r.name || "—") + "</td>" + cells + "</tr>";
-    }).join("");
-    body.innerHTML = "<table class='grid'><thead>" + head
-      + "</thead><tbody>" + rows + "</tbody></table>";
-  }
-
-  var box = $("failed-box"), fbody = $("failed-body");
-  if (!failed.length && !insufficient.length) {
-    box.hidden = true;
+function render(data) {
+  var sum = $("result-sum"), body = $("result-body"), actions = $("result-actions");
+  if (data.error) {
+    body.innerHTML = "<div class='degrade'>" + esc(data.error) + "</div>";
     return;
   }
-  box.hidden = false;
-  $("failed-summary").textContent = "未通过 " + failed.length + " 只 · 数据不足 "
-    + insufficient.length + " 只（展开看断在哪个条件）";
-  var frows = failed.map(function (r) {
-    var names = r.failed.map(function (f) { return f.name; }).join("、");
-    var first = r.failed[0];
-    return "<tr><td>" + esc(r.symbol) + "</td><td class='name'>" + esc(r.name || "—")
-      + "</td><td style='text-align:left'>" + esc(names) + "</td><td>"
-      + (first ? fmtValue(first.column, first.value) : "—") + "</td></tr>";
+  if (data.unavailable) {
+    body.innerHTML = "<div class='degrade'><b>该策略暂不可用</b>：" + esc(data.unavailable)
+      + "<br>全市场通道需要已配置 wm.sh（平台门面）。可以先试「高股息 ≥3%」"
+      + "等其他策略，或本地运行真实模式。选股结果 ≠ 推荐。</div>";
+    return;
+  }
+  var meta = data.strategy || {};
+  var cols = data.columns || [];
+  var rows = data.rows || [];
+  var orderCol = null;
+  if (data.order && data.order.key) {
+    orderCol = cols.filter(function (c) { return c.key === data.order.key; })[0] || null;
+  }
+  var dirText = data.order && data.order.dir === "asc" ? "升序" : "降序";
+  var orderText = orderCol ? "按" + orderCol.label + dirText : "";
+  sum.innerHTML = "「" + esc(meta.name || "") + "」命中 <b class='pass'>" + rows.length
+    + "</b> 只（top " + esc(data.limit || "") + (orderText ? "，" + orderText : "") + "）";
+  if (!rows.length) {
+    body.innerHTML = "<div class='empty'>没有符合条件的股票——条件可以放宽一点</div>";
+    actions.innerHTML = "";
+    return;
+  }
+  var head = "<tr><th>代码</th><th>名称</th>" + cols.map(function (c) {
+    return "<th>" + esc(c.label) + "</th>";
+  }).join("") + "</tr>";
+  var trs = rows.map(function (r) {
+    var tds = cols.map(function (c) {
+      return "<td>" + esc(fmt(c.fmt, (r.values || {})[c.key])) + "</td>";
+    }).join("");
+    return "<tr><td class='code' title='点击复制' data-code='" + esc(r.code)
+      + "'>" + esc(r.code) + "</td><td class='name'>" + esc(r.name || "—")
+      + "</td>" + tds + "</tr>";
+  }).join("");
+  body.innerHTML = "<div class='table-scroll'><table class='grid'><thead>" + head
+    + "</thead><tbody>" + trs + "</tbody></table></div>";
+
+  var codes = rows.map(function (r) { return r.code; });
+  var demoNote = data.demo ? " <span class='tag'>演示模式不推送观察池</span>" : "";
+  actions.innerHTML =
+    "<button type='button' class='sum-btn' id='copy-all'>复制全部代码</button>"
+    + (data.demo ? "" : "<button type='button' class='sum-btn' id='push' "
+      + "style='margin-left:8px'>➕ 加入观察池</button>")
+    + demoNote;
+
+  $("copy-all").addEventListener("click", function () {
+    copyText(codes.join(", "), function (ok) {
+      $("push-toast").textContent = ok ? "已复制 " + codes.length + " 个代码" : "复制失败";
+      $("push-toast").className = "toast" + (ok ? "" : " bad");
+    });
   });
-  insufficient.forEach(function (r) {
-    frows.push("<tr><td>" + esc(r.code || r.symbol) + "</td><td class='name'>"
-      + esc(r.name || "—") + "</td><td style='text-align:left'>数据不足</td><td>—</td></tr>");
+  body.querySelectorAll("td.code").forEach(function (td) {
+    td.addEventListener("click", function () {
+      copyText(td.dataset.code, function (ok) {
+        $("push-toast").textContent = ok ? "已复制 " + td.dataset.code : "复制失败";
+        $("push-toast").className = "toast" + (ok ? "" : " bad");
+      });
+    });
   });
-  fbody.innerHTML = "<table class='grid'><thead><tr><th>代码</th><th>名称</th>"
-    + "<th style='text-align:left'>未过条件</th><th>该条件数字</th></tr></thead><tbody>"
-    + frows.join("") + "</tbody></table>";
+  var pushBtn = $("push");
+  if (pushBtn) pushBtn.addEventListener("click", function () {
+    pushWatchlist(meta.name || "筛选", codes);
+  });
+}
+
+function copyText(text, cb) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () { cb(true); },
+                                             function () { cb(false); });
+    return;
+  }
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    var ok = document.execCommand("copy"); ta.remove(); cb(ok);
+  } catch (e) { cb(false); }
+}
+
+function pushWatchlist(strategyName, codes) {
+  var toast = $("push-toast");
+  toast.className = "toast";
+  toast.textContent = "推送中…";
+  fetch("/api/watchlist-push", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ group: "筛选·" + strategyName,
+                           positions: codes.map(function (c) { return { code: c }; }) }),
+  }).then(function (r) { return r.json(); }).then(function (data) {
+    if (data.error) {
+      toast.className = "toast bad";
+      toast.textContent = "推送失败：" + data.error;
+      return;
+    }
+    toast.textContent = "已写入分组「" + (data.group_id ? "已同步" : "已创建/更新")
+      + "」：新增 " + (data.added || []).length + " 只，已存在 "
+      + (data.already_in || []).length + " 只。打开收息佬即可监控这些票的分红日历。";
+  }).catch(function (exc) {
+    toast.className = "toast bad";
+    toast.textContent = "推送失败：" + String(exc);
+  });
 }
 
 // ---- 事件 ----
-$("codes").addEventListener("input", function () { updateHints(); });
-$("codes").addEventListener("keydown", function (e) {
-  if (e.key === "Enter") run();
-});
-document.querySelectorAll("#conds input").forEach(function (cb) {
-  cb.addEventListener("change", updateHints);
-});
 $("run").addEventListener("click", run);
+$("topn").addEventListener("change", function () { updateQuota(); save(); });
+["c-yield", "c-pe", "c-pb"].forEach(function (id) {
+  $(id).addEventListener("input", save);
+  $(id).addEventListener("keydown", function (e) {
+    if (e.key === "Enter") run();
+  });
+});
 
-// ---- 恢复上次输入 ----
-try {
-  var saved = JSON.parse(localStorage.getItem("screener_v1") || "null");
-  if (saved) {
-    if (saved.codes) $("codes").value = saved.codes;
-    if (Array.isArray(saved.conds)) {
-      document.querySelectorAll("#conds input").forEach(function (cb) {
-        cb.checked = saved.conds.indexOf(cb.dataset.cond) >= 0;
-      });
-    }
-  }
-} catch (e) { /* 忽略 */ }
-updateHints();
-$("codes").focus();
+restore();
+renderCards();
+updateQuota();
 
 // ---- demo 徽章 + 体验 Key 提示（每会话一次）----
 fetch("/api/appinfo").then(function (r) { return r.json(); }).then(function (info) {
   if (info.demo) {
     $("demo-badge").textContent = "演示数据";
-    $("key-badge").textContent = "";
   } else {
     $("key-badge").textContent = info.trial ? "" : "finpipe 实时数据";
     if (!info.trial || sessionStorage.getItem("trialKeyHintDismissed")) return;
@@ -394,7 +402,7 @@ fetch("/api/appinfo").then(function (r) { return r.json(); }).then(function (inf
       }
     });
   }
-}).catch(function () { /* Pyodide 未就绪等场景忽略 */ });
+}).catch(function () { /* 就绪前忽略 */ });
 </script>
 </body>
 </html>

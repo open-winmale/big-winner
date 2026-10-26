@@ -53,7 +53,7 @@ TOOLS: dict[str, dict[str, str]] = {
     },
     "screener": {
         "title": "筛选",
-        "tagline": "粘贴代码 · 回车过筛 —— 条件与数字都摆给你看",
+        "tagline": "预置策略 · 一键全市场 —— 格雷厄姆、高股息，条件与数字都摆给你看",
         "page": "screener.html",
     },
 }
@@ -804,20 +804,18 @@ def run_diagnose(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_screener(payload: dict[str, Any]) -> dict[str, Any]:
-    """筛选 · 单票过筛：校验 6 位 A 股码 → 取数 → 逐条件判定。
+    """筛选 · 预置策略全市场选股：{strategy|custom, limit} → {columns, rows}。
 
-    每票一次请求（前端逐票并发、渐进渲染）；条件 id 空缺走默认集。
+    通道不可用（未装 wm.sh 等）→ 200 + unavailable + 原因，页面降级展示。
     """
-    raw = str(payload.get("symbol") or "").strip()
-    symbol = "".join(ch for ch in raw if ch.isdigit())
-    if len(symbol) != 6:
-        raise ToolError("仅支持 A 股 6 位代码")
+    limit = scr.clamp_limit(payload.get("limit"))
     try:
-        cond_ids = scr.validate_conditions(payload.get("conditions"))
+        custom = payload.get("custom")
+        strategy = scr.build_custom(custom) if custom is not None \
+            else scr.get_strategy(payload.get("strategy"))
     except ValueError as exc:
         raise ToolError(str(exc)) from exc
-    result = scr.evaluate_stock(screener_data(), symbol, cond_ids)
-    result["conditions"] = cond_ids
+    result = scr.run_screen(screener_data(), strategy, limit)
     result["disclaimer"] = DISCLAIMER
     result["demo"] = RUNTIME.demo
     return result
