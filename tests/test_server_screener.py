@@ -121,3 +121,14 @@ def test_api_screener_rejects_empty_custom(base_url):
     status, body = _post(base_url + "/api/screener", {"custom": {}})
     assert status == 400
     assert "至少填一个条件" in body["error"]
+
+
+def test_screener_data_real_mode_builds_platform_source():
+    """真实模式的数据源必须存在且可构造（回归：改名后 server 仍引用旧类名）。"""
+    srv.RUNTIME.demo = False
+    srv._SCREENER_DATA = None
+    try:
+        data = srv.screener_data()
+        assert isinstance(data, srv.scr.PlatformScreenerSource)
+    finally:
+        srv._SCREENER_DATA = None

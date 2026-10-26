@@ -50,11 +50,11 @@ def test_build_custom_empty_rejected():
 
 def test_build_custom_percent_tolerance_and_conditions():
     s = scr.build_custom({"yield_gte": "3", "pe_lt": "15"})
-    fields = [c["field"] for c in s.conditions]
-    assert fields == ["$BONUS_RATE_TTM_LAST", "$PE_TTM_LAST"]
+    assert s.conditions[0]["field"] == "$BONUS_RATE_TTM_LAST"
     assert s.conditions[0]["value"]["scalar"]["value"] == "0.03"
-    assert s.conditions[1]["operator"] == "LT"
-    assert [c[0] for c in s.columns] == fields
+    pe_conds = [c for c in s.conditions if c["field"] == "$PE_TTM_LAST"]
+    assert [c["operator"] for c in pe_conds] == ["GTE", "LT"]   # 正盈利下界 + 上限
+    assert [c[0] for c in s.columns] == ["$BONUS_RATE_TTM_LAST", "$PE_TTM_LAST"]
     assert s.order == ("$PE_TTM_LAST", "asc")     # 估值列升序
 
 
@@ -63,6 +63,21 @@ def test_to_ratio():
     assert scr._to_ratio("0.03") == 0.03
     assert scr._to_ratio("abc") is None
     assert scr._to_ratio("-1") is None
+
+
+def test_graham_excludes_negative_pe():
+    """亏损股的负 PE 不满足「0<PE<15」——格雷厄姆要的是便宜且盈利。"""
+    graham = scr.get_strategy("graham")
+    loser = scr._Stock("600000", "亏损股", -5.0, 0.5, 0.05, 0.5)
+    assert scr._match(loser, graham.conditions) is False
+    cheap = scr._Stock("600001", "便宜股", 14.9, 1.4, 0.05, 0.5)
+    assert scr._match(cheap, graham.conditions) is True
+
+
+def test_build_custom_pe_adds_positive_floor():
+    s = scr.build_custom({"pe_lt": "15"})
+    pe_conds = [c for c in s.conditions if c["field"] == "$PE_TTM_LAST"]
+    assert [c["operator"] for c in pe_conds] == ["GTE", "LT"]
 
 
 # ---------------------------------------------------------------- 通道解析

@@ -134,7 +134,7 @@ def screener_data() -> Any:
         if RUNTIME.demo:
             _SCREENER_DATA = scr.FakeScreenerSource()
         else:
-            _SCREENER_DATA = scr.FinpipeScreenerSource()
+            _SCREENER_DATA = scr.PlatformScreenerSource()
     return _SCREENER_DATA
 
 

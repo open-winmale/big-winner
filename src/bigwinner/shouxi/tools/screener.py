@@ -67,23 +67,26 @@ STRATEGIES: list[Strategy] = [
     ),
     Strategy(
         id="graham", name="格雷厄姆（简化）",
-        intro="PE(TTM)<15 且市净率<1.5，经典价值派安全边际筛（蕴含 PE×PB<22.5）",
+        intro="盈利为正（0<PE≤15）且市净率<1.5，经典价值派安全边际筛（蕴含 PE×PB<22.5）",
         market="cn", columns=(_PE, _PB), order=(_PE[0], "asc"),
-        conditions=(_ind("$PE_TTM_LAST", "PE(TTM)", "LT", 15),
+        conditions=(_ind("$PE_TTM_LAST", "PE(TTM)", "GTE", 0),
+                    _ind("$PE_TTM_LAST", "PE(TTM)", "LT", 15),
                     _ind("$PB_TTM_LAST", "市净率", "LT", 1.5)),
     ),
     Strategy(
         id="cheap_income", name="低估值高息",
-        intro="PE(TTM)<15 且股息率≥3%，低估值与现金流的交集",
+        intro="盈利为正（0<PE≤15）且股息率≥3%，低估值与现金流的交集",
         market="cn", columns=(_PE, _YIELD), order=(_YIELD[0], "desc"),
-        conditions=(_ind("$PE_TTM_LAST", "PE(TTM)", "LT", 15),
+        conditions=(_ind("$PE_TTM_LAST", "PE(TTM)", "GTE", 0),
+                    _ind("$PE_TTM_LAST", "PE(TTM)", "LT", 15),
                     _ind("$BONUS_RATE_TTM_LAST", "股息率TTM", "GTE", 0.03)),
     ),
     Strategy(
         id="below_pb", name="破净股",
-        intro="市净率低于 1，市值低于净资产——注意资产质量，入选后先做体检",
+        intro="0<市净率<1，市值低于净资产——注意资产质量，入选后先做体检",
         market="cn", columns=(_PB, _YIELD), order=(_PB[0], "asc"),
-        conditions=(_ind("$PB_TTM_LAST", "市净率", "LT", 1),),
+        conditions=(_ind("$PB_TTM_LAST", "市净率", "GTE", 0),
+                    _ind("$PB_TTM_LAST", "市净率", "LT", 1)),
     ),
     Strategy(
         id="payout_30_70", name="派息率 30%–70%",
@@ -158,10 +161,12 @@ def build_custom(spec: dict[str, Any]) -> Strategy:
         columns.append(_YIELD)
     pe = _to_ratio(spec.get("pe_lt"))
     if pe is not None:
+        conds.append(_ind("$PE_TTM_LAST", "PE(TTM)", "GTE", 0))  # 排除亏损负 PE
         conds.append(_ind("$PE_TTM_LAST", "PE(TTM)", "LT", round(pe, 2)))
         columns.append(_PE)
     pb = _to_ratio(spec.get("pb_lt"))
     if pb is not None:
+        conds.append(_ind("$PB_TTM_LAST", "市净率", "GTE", 0))   # 排除负净资产
         conds.append(_ind("$PB_TTM_LAST", "市净率", "LT", round(pb, 2)))
         columns.append(_PB)
     if not conds:
