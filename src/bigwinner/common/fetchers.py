@@ -108,7 +108,7 @@ class FinpipeFetcher:
             except ImportError as exc:  # pragma: no cover
                 raise RuntimeError(
                     "未安装 finpipe。请先：git clone https://github.com/open-winmale/finpipe，"
-                    "再 pip install -e ./finpipe（非商业许可）。"
+                    "再 pip install -e ./finpipe（MIT 开源）。"
                 ) from exc
             client = finpipe.Client.from_env()
         self.cli = client
