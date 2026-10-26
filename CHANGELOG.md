@@ -1,11 +1,6 @@
 # Changelog
 
-## Unreleased
-
-### Changed
-
-- **许可口径回退**：finpipe 1.4.4 恢复 PolyForm Noncommercial（限制商业使用），
-  README 双许可表、页面页脚与 docstring 同步恢复「非商业许可」表述。
+## 1.5.0 — 2026-10-26
 
 ### Added
 
@@ -25,6 +20,8 @@
 
 - **透视表「分析」列移到首列**（用户反馈）：15 列宽表横向滚动时按钮始终可见，
   不再需要拖滚动条找按钮；名称列补 nowrap 防竖排；首页贴图同步重截。
+- **许可口径回退**：finpipe 1.4.4 恢复 PolyForm Noncommercial（限制商业使用），
+  README 双许可表、页面页脚与 docstring 同步恢复「非商业许可」表述。
 
 ### Removed
 
@@ -32,6 +29,16 @@
   demo-pages 发布工作流，公网 demo 页撤下；README 保留两张工具截图作为门面。
   想要实时数据请本地运行 `python -m bigwinner.shouxi`（真实模式）；`--demo`
   罐头数据模式保留，供零凭证快速体验。
+
+### Fixed
+
+- **筛选真实模式类名修正**：取数单例改用改名后的 `PlatformScreenerSource`
+  （demo 测试全走罐头未暴露，真实模式点选股即 `AttributeError`）；
+  补真实模式数据源构造回归测试。
+- **格雷厄姆/破净排除负值**：实测发现亏损股负 PE（南玻A −29、万科A −0.45）
+  满足 PE<15 混入格雷厄姆清单并因升序置顶——graham/cheap_income 加
+  `0<PE` 下界、below_pb 加 `0<PB` 下界，自定义组合 PE/市净率输入自动带
+  正值下界；README 口径表同步。
 
 ## 1.4.0 — 2026-10-26
 
