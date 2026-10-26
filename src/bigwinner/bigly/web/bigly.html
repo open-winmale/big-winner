@@ -6,10 +6,13 @@
 <title>波段 · 估值买卖点区间与拨测</title>
 <link rel="stylesheet" href="/assets/base.css">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script>/* 单 CDN 挂了会白图：jsdelivr 失败时回退 unpkg */
+window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/dist/echarts.min.js"><\/script>');</script>
 <style>
-  .banner{background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;
-    color:#92400e;padding:10px 14px;border-radius:8px;margin:12px 0;font-size:13.5px}
-  .banner b{font-weight:650}
+  .banner{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;
+    color:#b91c1c;padding:10px 14px;border-radius:8px;margin:12px 0;font-size:13.5px;
+    font-weight:650}
+  .banner b{font-weight:750}
   .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
   .seg button{border:none;background:var(--surface);padding:6px 14px;font-size:13px;
     color:var(--fg);cursor:pointer}
@@ -86,7 +89,6 @@
           <button data-v="3y">3 年</button>
         </span>
       </span>
-      <button class="primary" id="btn-load">加载通道</button>
       <span id="load-note" class="meta"></span>
     </div>
   </section>
@@ -216,8 +218,9 @@ async function post(url, payload){
   return r.json();
 }
 
-seg("seg-metric", (v)=>{ state.metric = v; });
-seg("seg-window", (v)=>{ state.window = v; });
+/* 指标 / 窗口切换即生效：点选后直接重载通道与整链结果 */
+seg("seg-metric", (v)=>{ state.metric = v; load(); });
+seg("seg-window", (v)=>{ state.window = v; load(); });
 seg("seg-source", (v)=>{
   $("user-inputs").style.display = v === "user" ? "block" : "none";
   renderLevels();
@@ -250,8 +253,6 @@ async function autoBacktest(){
   renderLevels();
   renderResult(r);
 }
-
-$("btn-load").onclick = load;
 
 /* ---- 代码搜索联想（与收息佬同款：finpipe 离线全市场代码目录）---- */
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
