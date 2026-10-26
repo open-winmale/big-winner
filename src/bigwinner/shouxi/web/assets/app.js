@@ -1947,6 +1947,18 @@
     }
 
     document.getElementById('btn-run').onclick = run;
+    // 默认自动生成一次透视表：持仓就绪（demo 预填/载入档案）即直出结果，免去手动点击。
+    // 持仓初始化是异步的（真实模式查档案失败才走示例持仓），轮询等待；空持仓则保持引导态。
+    let autoTries = 0;
+    const autoTimer = setInterval(() => {
+      autoTries += 1;
+      if (positions.length) {
+        clearInterval(autoTimer);
+        if (!document.getElementById('result')?.innerHTML) run();
+      } else if (autoTries >= 12) {
+        clearInterval(autoTimer); // 约 3.6s 仍无持仓（真实模式未添加），保持引导态
+      }
+    }, 300);
     document.getElementById('btn-save').onclick = showSave;
     document.getElementById('btn-load').onclick = showLoad;
     document.getElementById('btn-history').onclick = showHistory;
