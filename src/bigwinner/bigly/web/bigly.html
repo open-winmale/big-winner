@@ -201,7 +201,8 @@ const pctileText = (v) => v == null ? "—" : (v * 100).toFixed(0) + "%";
 const zoneText = {belowLow:"低于低估线", low:"偏低", normal:"正常区间", high:"偏高", aboveHigh:"高于高估线"};
 const zoneCls = {belowLow:"badge ok", low:"badge ok", normal:"badge", high:"badge warn", aboveHigh:"badge warn"};
 let chart = null, state = {symbol:null, metric:"pe", window:"6m",
-  channel:null, levels:null, suggest:null, last_close:null, sym_name:null};
+  channel:null, levels:null, suggest:null, last_close:null, sym_name:null,
+  metricOverride:false};
 
 function seg(id, cb){
   $(id).addEventListener("click", (e) => {
@@ -211,6 +212,9 @@ function seg(id, cb){
   });
 }
 function segVal(id){ return $(id).querySelector(".active").dataset.v; }
+function setSeg(id, v){
+  [...$(id).children].forEach(b => b.classList.toggle("active", b.dataset.v === v));
+}
 const fmtPct = (v, digits=1) => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(digits) + "%";
 async function post(url, payload){
   const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"},
@@ -218,8 +222,9 @@ async function post(url, payload){
   return r.json();
 }
 
-/* 指标 / 窗口切换即生效：点选后直接重载通道与整链结果 */
-seg("seg-metric", (v)=>{ state.metric = v; load(); });
+/* 指标 / 窗口切换即生效：点选后直接重载通道与整链结果。
+   手动选过指标后，本票之内不再自动改指标（换票重新允许） */
+seg("seg-metric", (v)=>{ state.metric = v; state.metricOverride = true; load(); });
 seg("seg-window", (v)=>{ state.window = v; load(); });
 seg("seg-source", (v)=>{
   $("user-inputs").style.display = v === "user" ? "block" : "none";
@@ -227,17 +232,39 @@ seg("seg-source", (v)=>{
 });
 ["in-low","in-high"].forEach(id => $(id).addEventListener("input", renderLevels));
 
+/* 联想没带来名称时按代码查目录补齐（目录不可用则拿不到，不猜测） */
+async function resolveSymName(){
+  if(state.sym_name || !state.symbol) return;
+  const code = state.symbol;
+  const mkt = /^hk\./i.test(code) || (/^\d{1,5}$/.test(code) && code.length !== 6) ? "hk" : "cn";
+  try{
+    const d = await (await fetch("/api/bigly/symbols?q=" + encodeURIComponent(code)
+                                + "&market=" + mkt)).json();
+    const hit = (d.results || []).find(
+      r => (r.code || "").replace(/\D/g, "") === code.replace(/\D/g, ""));
+    if(hit) state.sym_name = hit.name || null;
+  }catch(e){ /* 保持无名，不阻塞加载 */ }
+}
+
 async function load(){
   state.symbol = $("sym").value.trim();
   if(!state.symbol){ $("load-note").textContent = "请输入代码"; return; }
   $("load-note").textContent = "加载中…";
+  // 银行默认 PB 估值：名称含「银行」且未手动选过指标时自动切换
+  await resolveSymName();
+  let bankNote = false;
+  if(!state.metricOverride && state.metric === "pe"
+     && state.sym_name && state.sym_name.includes("银行")){
+    state.metric = "pb"; setSeg("seg-metric", "pb"); bankNote = true;
+  }
   const r = await post("/api/bigly/channel", {symbol: state.symbol, metric: state.metric,
                                               window: state.window});
   if(r.error){ $("load-note").textContent = r.error; return; }
   state.channel = r.channel; state.levels = r.levels;
   state.last_close = r.last_close; state.suggest = null;
   $("load-note").textContent = r.demo ? "（演示数据）"
-    : `已加载 ${r.symbol}${state.sym_name ? " · " + state.sym_name : ""}`;
+    : `已加载 ${r.symbol}${state.sym_name ? " · " + state.sym_name : ""}`
+      + (bankNote ? "（银行 → 默认 PB）" : "");
   drawChart(r); renderKpis(r); renderSafety(r); renderDist(r); renderLevels();
   await autoBacktest();
 }
@@ -262,6 +289,7 @@ function closeSymDrop(){ if(symDrop){ symDrop.remove(); symDrop = null; } }
 function symPick(item){
   $("sym").value = item.code;
   state.sym_name = item.name || null;
+  state.metricOverride = false;  // 换票重新允许「银行默认 PB」
   closeSymDrop();
   load();
 }
@@ -293,6 +321,7 @@ async function symQuery(q){
 }
 $("sym").addEventListener("input", () => {
   state.sym_name = null;  // 手工输入视为换票，清掉联想带来的名称
+  state.metricOverride = false;  // 换票重新允许「银行默认 PB」
   const q = $("sym").value.trim();
   clearTimeout(symDebounce);
   if(!q){ closeSymDrop(); return; }
