@@ -346,6 +346,7 @@
   function renderTable(d) {
     const rows = d.rows.map((r) => `
       <tr>
+        <td class="cell-action"><button class="btn-analyze" data-diagnose-code="${esc(r.code)}" title="分红持续性分析"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M1 8h3l2-5 3 10 2-5h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>分析</button></td>
         <td><span class="chip-mkt mkt-${r.market || 'cn'}">${mktLabel(r.market)}</span> ${esc(r.code)}</td>
         <td>${r.name ? esc(r.name) : DASH}${r.market === 'hk' ? ' <span class="currency-tag">HKD</span>' : ''}${r.price_estimated ? ' <span class="badge warn">估价</span>' : ''}</td>
         <td class="num">${fmtInt(r.shares)}</td>
@@ -362,19 +363,18 @@
         <td>${r.missing && r.missing.length
             ? r.missing.map((m) => `<span class="badge warn">${esc(m)}</span>`).join(' ')
             : '<span class="muted">·</span>'}</td>
-        <td class="cell-action"><button class="btn-analyze" data-diagnose-code="${esc(r.code)}" title="分红持续性分析"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M1 8h3l2-5 3 10 2-5h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>分析</button></td>
       </tr>`).join('');
 
     return `<div class="table-scroll"><table class="xray-table">
       <thead><tr>
-        <th>代码</th><th>名称</th><th class="num">持股</th><th class="num">现价</th>
+        <th></th><th>代码</th><th>名称</th><th class="num">持股</th><th class="num">现价</th>
         <th class="num">市值(原币)</th><th class="num">占比</th><th class="num">每股利润</th>
         <th class="num">每股股息</th><th class="num">股息率</th><th class="num">成本股息率</th><th class="num" title="现金分红 ÷ 归母净利润">分红率(TTM)</th>
-        <th class="num">持仓年息(原币)</th><th class="num">浮动</th><th>数据说明</th><th>分析</th>
+        <th class="num">持仓年息(原币)</th><th class="num">浮动</th><th>数据说明</th>
       </tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr>
-        <td colspan="4">合计（${esc(d.total_currency || 'CNY')}）</td>
+        <td></td><td colspan="4">合计（${esc(d.total_currency || 'CNY')}）</td>
         <td class="num">${fmtMoney(d.total_market_value)}</td>
         <td class="num">100%</td>
         <td class="num">${DASH}</td>

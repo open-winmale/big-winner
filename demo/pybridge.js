@@ -12,7 +12,8 @@
     "font:14px/1.6 -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:#334155;";
   overlay.innerHTML =
     '<div style="font-size:15px;font-weight:600">正在加载浏览器内演示环境…</div>' +
-    '<div style="color:#64748b">首次约 10–20 秒（下载 Python 运行时），之后全部本地计算</div>' +
+    '<div style="color:#64748b">运行时与页面同源加载（无外部 CDN）；首次约 5–15 秒，之后有浏览器缓存</div>' +
+    '<div style="color:#64748b">全部计算在你浏览器内完成，不经任何服务器</div>' +
     '<div id="bigdemo-status" style="color:#94a3b8;font-size:12px"></div>';
   document.addEventListener('DOMContentLoaded', function () {
     document.body.appendChild(overlay);
@@ -46,6 +47,8 @@
     '    if method == "GET":',
     '        if path == "/api/tools":',
     '            return 200, {"tools": [{k: v for k, v in t.items() if k not in ("page", "web_dir")} for t in srv.TOOLS.values()], "demo": True}',
+    '        if path == "/api/appinfo":',
+    '            return 200, {"demo": True, "trial": False}',
     '        if path == "/api/health":',
     '            return 200, {"ok": True, "demo": True}',
     '        if path in ("/api/symbols", "/api/bigly/symbols"):',

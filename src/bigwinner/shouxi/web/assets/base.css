@@ -388,7 +388,7 @@ tfoot td { border-top: 1px solid var(--line-strong); font-weight: 620; backgroun
 .table-scroll { overflow-x: auto; }
 #result { scroll-margin-top: 70px; }
 #positions-card { scroll-margin-top: 70px; }
-.xray-table td:first-child, .xray-table td:nth-child(2) { white-space: nowrap; }
+.xray-table td:first-child, .xray-table td:nth-child(2), .xray-table td:nth-child(3) { white-space: nowrap; }
 .xray-table th:last-child, .xray-table td.cell-action { white-space: nowrap; }
 button.link { white-space: nowrap; }
 
