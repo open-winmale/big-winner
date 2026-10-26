@@ -6,7 +6,7 @@
 [![在线 Demo](https://img.shields.io/badge/demo-免安装体验-2ea44f)](https://open-winmale.github.io/big-winner/)
 
 > A 股 / 港股持仓收息、分红日历与记账（**收息佬**）· 估值买卖点区间参考（**波段**）。
-> **v1.3.0** · [GitHub](https://github.com/open-winmale/big-winner) · 数据来自
+> **v1.4.0** · [GitHub](https://github.com/open-winmale/big-winner) · 数据来自
 > [finpipe](https://github.com/open-winmale/finpipe)，只做事实与统计聚合；
 > 工具代码 MIT，经 finpipe 取数时运行时受其非商业许可约束（见「许可与合规」）。
 
