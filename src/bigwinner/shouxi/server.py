@@ -33,6 +33,7 @@ from bigwinner.common.watchlist_sync import StockScreener, WatchlistSync
 from bigwinner.shouxi.tools import dividend_xray as t1
 from bigwinner.shouxi.tools import dividend_quality as dq
 from bigwinner.shouxi.tools import ledger as ledger_mod
+from bigwinner.shouxi.tools import screener as scr
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
@@ -49,6 +50,11 @@ TOOLS: dict[str, dict[str, str]] = {
         "tagline": bigly_srv.TOOL_META["tagline"],
         "page": "bigly.html",
         "web_dir": str(bigly_srv.WEB_DIR),
+    },
+    "screener": {
+        "title": "筛选",
+        "tagline": "粘贴代码 · 回车过筛 —— 条件与数字都摆给你看",
+        "page": "screener.html",
     },
 }
 
@@ -116,6 +122,20 @@ def bigly_data() -> Any:
     if _BIGLY_DATA is None:
         _BIGLY_DATA = bigly_srv.build_data(RUNTIME.demo)
     return _BIGLY_DATA
+
+
+_SCREENER_DATA: Any = None
+
+
+def screener_data() -> Any:
+    """筛选工具的取数实例（demo→确定性罐头，真实→finpipe，仅 A 股口径）。"""
+    global _SCREENER_DATA
+    if _SCREENER_DATA is None:
+        if RUNTIME.demo:
+            _SCREENER_DATA = scr.FakeScreenerSource()
+        else:
+            _SCREENER_DATA = scr.FinpipeScreenerSource()
+    return _SCREENER_DATA
 
 
 def _demo_data() -> dict[str, Any]:
@@ -783,6 +803,26 @@ def run_diagnose(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def run_screener(payload: dict[str, Any]) -> dict[str, Any]:
+    """筛选 · 单票过筛：校验 6 位 A 股码 → 取数 → 逐条件判定。
+
+    每票一次请求（前端逐票并发、渐进渲染）；条件 id 空缺走默认集。
+    """
+    raw = str(payload.get("symbol") or "").strip()
+    symbol = "".join(ch for ch in raw if ch.isdigit())
+    if len(symbol) != 6:
+        raise ToolError("仅支持 A 股 6 位代码")
+    try:
+        cond_ids = scr.validate_conditions(payload.get("conditions"))
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    result = scr.evaluate_stock(screener_data(), symbol, cond_ids)
+    result["conditions"] = cond_ids
+    result["disclaimer"] = DISCLAIMER
+    result["demo"] = RUNTIME.demo
+    return result
+
+
 def key_status(_: dict[str, Any]) -> dict[str, Any]:
     """当前凭证状态：是否用着自己的 Key（只回布尔与来源，绝不回 Key 本体）。"""
     custom = bool(os.environ.get("FINPIPE_CLIENT_ID")) or \
@@ -827,6 +867,7 @@ HANDLERS = {
     "ledger": run_ledger,
     "calendar": run_calendar,
     "diagnose": run_diagnose,
+    "screener": run_screener,
     "key-status": key_status,
     "key-save": key_save,
     # 波段：复用其纯函数 API，data 用本进程的惰性实例

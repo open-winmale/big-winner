@@ -14,5 +14,3 @@ data/
 .mypy_cache/
 build/
 dist/
-demo/site/
-demo/.vendor-cache/

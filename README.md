@@ -3,15 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](pyproject.toml)
 [![Tests](https://github.com/open-winmale/big-winner/actions/workflows/ci.yml/badge.svg)](https://github.com/open-winmale/big-winner/actions/workflows/ci.yml)
-[![在线 Demo](https://img.shields.io/badge/demo-免安装体验-2ea44f)](https://open-winmale.github.io/big-winner/)
 
 > A 股 / 港股持仓收息、分红日历与记账（**收息佬**）· 估值买卖点区间参考（**波段**）。
 > **v1.4.0** · [GitHub](https://github.com/open-winmale/big-winner) · 数据来自
 > [finpipe](https://github.com/open-winmale/finpipe)，只做事实与统计聚合；
 > 工具代码 MIT，经 finpipe 取数时运行时受其非商业许可约束（见「许可与合规」）。
-
-**▶ 免安装在线体验**：<https://open-winmale.github.io/big-winner/>
-—— 浏览器内直接运行（内置样例数据，首次加载约 10–20 秒），无需 Python、无需 finpipe 凭证。
 
 | 收息佬 · 持仓透视与分红日历 | 波段 · 估值买卖点区间参考 |
 |---|---|
@@ -82,8 +78,8 @@ export FINPIPE_CLIENT_SECRET=...
 
 | 工具 | 状态 | 说明 |
 |---|---|---|
-| [波段](https://open-winmale.github.io/big-winner/bigly.html) | ✅ 可用 | 估值买卖点区间参考 + 拨测回看：PE/PB 均值±Nσ 通道（与平台 web「估值通道」同源）、**区间设置 = 推荐区间（默认，四条约束自动搜点，含成交次数）+ 自定义区间**（自填目标 PE/PB）、安全边界（高位介入回撤统计 + 止损参考）、**区间分布与极值**（估值/股价三区分布、距极值溢出）、多轮进出历史回放与「波段 vs 长持」收益对比；窗口半年~3 年，默认半年，进页自动加载。总览页直达；也可独立启动 :8788 |
-| [收息佬](https://open-winmale.github.io/big-winner/shouxi.html) | ✅ 可用 | 攒股收息驾驶舱：分红日历、每票持续性分析、A/HK 持仓透视（总市值/总利润/股息率/成本股息率）+ 派息稳定性看板 |
+| [波段](/tools/bigly/)（门户直达；独立启动 :8788） | ✅ 可用 | 估值买卖点区间参考 + 拨测回看：PE/PB 均值±Nσ 通道（与平台 web「估值通道」同源）、**区间设置 = 推荐区间（默认，四条约束自动搜点，含成交次数）+ 自定义区间**（自填目标 PE/PB）、安全边界（高位介入回撤统计 + 止损参考）、**区间分布与极值**（估值/股价三区分布、距极值溢出）、多轮进出历史回放与「波段 vs 长持」收益对比；窗口半年~3 年，默认半年，进页自动加载。总览页直达；也可独立启动 :8788 |
+| [收息佬](/tools/dividend-xray/) | ✅ 可用 | 攒股收息驾驶舱：分红日历、每票持续性分析、A/HK 持仓透视（总市值/总利润/股息率/成本股息率）+ 派息稳定性看板 |
 | 收息驾驶舱（透视表顶部） | ✅ 可用 | 自动载入最近持仓 → 未来 7/30/90/365 天除权与到账、税后现金、年息目标进度 |
 | 分红记账（透视表内） | ✅ 可用 | 按除权历史算税前/税后股息；A 股按持有时长分档，港股默认 20%，支持单票/年度/统一税率覆盖 |
 | 分红质量（透视表内） | ✅ 可用 | 经营现金流/FCF 对股息覆盖 + 分红率 3/5 年 + 连续性/意愿双轴；只评 A 股非金融，金融股/港股显式标注不评分 |
@@ -252,7 +248,6 @@ src/bigwinner/
     web/bigly.html
   common/                # store（SQLite 持仓档案）/ fetchers（CN/HK 双 client）/
                          # symbols（离线代码目录）/ export（CSV）/ watchlist_sync
-demo/                   # GitHub Pages 在线 demo（Pyodide）：build.py + pybridge.js
 tests/                  # 19 个文件 / 153 个离线用例
 ```
 

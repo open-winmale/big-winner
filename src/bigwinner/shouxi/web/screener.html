@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>筛选 · 收息佬</title>
+<link rel="stylesheet" href="/assets/base.css">
+<style>
+  .banner{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;
+    color:#b91c1c;padding:10px 14px;border-radius:8px;margin:12px 0;font-size:13.5px;
+    font-weight:650}
+  .banner b{font-weight:750}
+  .sym-input{width:100%;padding:10px 12px;font-size:15px;border:1px solid var(--line-strong);
+    border-radius:8px;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+  .sym-input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .run-btn{padding:10px 22px;font-size:14.5px;font-weight:650;border:none;border-radius:8px;
+    background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}
+  .run-btn:hover{background:var(--accent-hover)}
+  .run-btn:disabled{opacity:.5;cursor:default}
+  .hint{font-size:12.5px;color:var(--text-3);margin:8px 0 0;min-height:18px}
+  .hint.warn{color:#b45309}
+  .hint.bad{color:#dc2626}
+  .conds{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;margin-top:14px}
+  @media (max-width:768px){.conds{grid-template-columns:1fr}}
+  .group-title{font-size:13px;font-weight:650;color:var(--text-2);margin:10px 0 2px;
+    grid-column:1 / -1}
+  .cond{display:flex;gap:8px;align-items:baseline;font-size:13.5px;padding:3px 0;cursor:pointer}
+  .cond input{flex:none;transform:translateY(1px)}
+  .cond b{font-weight:620;white-space:nowrap}
+  .cond .intro{color:var(--text-3);font-size:12.5px}
+  .result-sum{font-size:13.5px;color:var(--text-2);margin:0 0 10px}
+  .result-sum b.pass{color:var(--accent)}
+  .grid{width:100%;border-collapse:collapse;font-size:13.5px}
+  .grid th,.grid td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;
+    white-space:nowrap}
+  .grid th:first-child,.grid td:first-child{text-align:left}
+  .grid th{color:var(--text-3);font-weight:600;border-bottom:1px solid var(--line-strong)}
+  .grid th.on{color:var(--accent-hover);background:var(--accent-soft)}
+  .grid td.name{color:var(--text-2)}
+  .up{color:var(--up)} .down{color:var(--down)}
+  .danger{color:#dc2626;font-weight:650}
+  .ok-mark{color:var(--accent);font-weight:700}
+  .no-mark{color:var(--text-3)}
+  .loading{color:var(--text-3)}
+  details.failed-box{margin-top:14px}
+  details.failed-box summary{cursor:pointer;font-size:13px;color:var(--text-2)}
+  .empty{color:var(--text-3);font-size:13.5px;padding:18px 0;text-align:center}
+  .foot-note{color:#64748b;font-size:12.5px;margin-top:16px;line-height:1.7}
+  #trial-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99;
+    display:flex;align-items:center;justify-content:center}
+  #trial-mask .box{background:#fff;border-radius:12px;max-width:420px;margin:16px;
+    padding:22px 24px;box-shadow:var(--shadow);font-size:14px;line-height:1.7}
+  #trial-mask .btns{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+  #trial-mask button{padding:7px 16px;border-radius:8px;font-size:13.5px;cursor:pointer;
+    border:1px solid var(--line-strong);background:#fff}
+  #trial-mask button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">筛选 <span class="dot">·</span> screener</span>
+    <span class="spacer"></span>
+    <span class="meta" id="demo-badge"></span>
+    <span class="meta" id="key-badge"></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="banner">⚠️ <b>免责声明：</b>本工具输出条件筛选的<b>事实结果</b>，不构成任何投资建议；
+    通过筛选 <b>≠</b> 推荐买入，观察与决策由你自己负责。</div>
+
+  <div class="page-head">
+    <h1>筛选 <span style="font-size:15px;color:#64748b">screener</span></h1>
+    <p>粘贴代码 · 回车过筛 —— 每个条件一句话讲清楚，每个数字摆给你看。仅 A 股，一次最多 10 只。</p>
+  </div>
+
+  <!-- 输入与条件 -->
+  <section class="card">
+    <div style="display:flex;gap:12px;align-items:center">
+      <input id="codes" class="sym-input" spellcheck="false" autocomplete="off"
+             placeholder="粘贴 6 位代码，逗号 / 空格 / 换行分隔，如：600519, 601318, 000858">
+      <button id="run" class="run-btn">开始过筛</button>
+    </div>
+    <div id="parse-hint" class="hint"></div>
+
+    <div class="conds" id="conds">
+      <div class="group-title">息 —— 分红本身好不好</div>
+      <label class="cond"><input type="checkbox" data-cond="yield_ge3" checked>
+        <b>股息率 ≥ 3%</b><span class="intro">TTM 口径，与平台高股息池一致</span></label>
+      <label class="cond"><input type="checkbox" data-cond="payout_30_70" checked>
+        <b>派息率 30%–70%</b><span class="intro">分红拿得出、留得住；超 100% 危险</span></label>
+      <label class="cond"><input type="checkbox" data-cond="div_years_ge3" checked>
+        <b>连续分红 ≥ 3 年</b><span class="intro">近年未断供（完整财年口径）</span></label>
+      <label class="cond"><input type="checkbox" data-cond="stable_yield">
+        <b>股息稳定</b><span class="intro">数据源判定，口径未公开</span></label>
+      <div class="group-title">势 —— 现在的走势与位置</div>
+      <label class="cond"><input type="checkbox" data-cond="above_ma20">
+        <b>站上 MA20</b><span class="intro">现价高于 20 日均线（前复权）</span></label>
+      <label class="cond"><input type="checkbox" data-cond="ma60_up">
+        <b>MA60 上行</b><span class="intro">中期趋势向上（60 日均线今高于昨）</span></label>
+      <label class="cond"><input type="checkbox" data-cond="chg20_le10">
+        <b>近 20 日涨幅 ≤ 10%</b><span class="intro">未被短线爆炒</span></label>
+    </div>
+    <div id="quota-hint" class="hint"></div>
+  </section>
+
+  <!-- 结果 -->
+  <section class="card" style="margin-top:16px">
+    <div id="result-sum" class="result-sum"></div>
+    <div id="result-body"><div class="empty">粘贴代码后回车，结果会出现在这里</div></div>
+    <details class="failed-box" id="failed-box" hidden>
+      <summary id="failed-summary">未通过的股票</summary>
+      <div id="failed-body" style="margin-top:8px"></div>
+    </details>
+    <div class="foot-note">
+      「—」为取数缺失（不冒充不通过）；事件停牌、ETF 与部分新股部分字段可能缺失。
+      每票约 3–4 次查询；通过筛选不构成推荐，深度体检请用「收息佬 · 分红质量」。
+    </div>
+  </section>
+
+  <div class="footer">
+    <div>数据来自 finpipe（A 股口径）；历史筛选结果不代表未来；最终以上市公司公告为准。</div>
+  </div>
+</main>
+
+<script>
+"use strict";
+var MAX_SYMBOLS = 10;
+var $ = function (id) { return document.getElementById(id); };
+
+var PCT_KEYS = { yield_ttm: 2, payout_ttm: 2, dist_ma20: 2, chg20d: 2 };
+
+function fmtValue(key, v) {
+  if (v === null || v === undefined) return "—";
+  if (key === "div_years") return String(v);
+  if (key === "close") return Number(v).toFixed(2);
+  if (key in PCT_KEYS) return (v * 100).toFixed(PCT_KEYS[key]) + "%";
+  if (typeof v === "boolean") return v ? "✓" : "✗";
+  return String(v);
+}
+function pctCell(key, v) {
+  var text = fmtValue(key, v);
+  if (v === null || v === undefined) return { text: text };
+  return { text: text, cls: v > 0 ? "up" : (v < 0 ? "down" : "") };
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+  });
+}
+
+// ---- 代码解析：从任意粘贴文本提取 6 位数字串 ----
+function parseCodes(text) {
+  var seen = [], tokens = String(text).split(/[^0-9]+/);
+  tokens.forEach(function (t) {
+    if (t.length === 6 && seen.indexOf(t) < 0) seen.push(t);
+  });
+  return seen;
+}
+function selectedConds() {
+  return Array.prototype.map.call(
+    document.querySelectorAll("#conds input[type=checkbox]"),
+    function (cb) { return cb.checked ? cb.dataset.cond : null; }
+  ).filter(Boolean);
+}
+function callCount(n, conds) {
+  var per = 3 + (conds.indexOf("stable_yield") >= 0 ? 1 : 0);
+  return n * per;
+}
+function updateHints(rawText) {
+  var hint = $("parse-hint"), quota = $("quota-hint");
+  var codes = parseCodes(rawText || $("codes").value);
+  var conds = selectedConds();
+  if (!codes.length) {
+    hint.className = "hint";
+    hint.textContent = rawText ? "没有识别到 6 位代码" : "";
+  } else {
+    var cut = codes.length > MAX_SYMBOLS;
+    var shown = codes.slice(0, MAX_SYMBOLS);
+    hint.className = "hint" + (cut ? " warn" : "");
+    hint.textContent = "已识别 " + codes.length + " 只："
+      + shown.join(" · ") + (cut ? "（超出 " + MAX_SYMBOLS + " 只，已截取前 " + MAX_SYMBOLS + " 只）" : "");
+  }
+  quota.textContent = codes.length && conds.length
+    ? "本次约发起 " + callCount(Math.min(codes.length, MAX_SYMBOLS), conds) + " 次查询（"
+      + Math.min(codes.length, MAX_SYMBOLS) + " 票 × " + callCount(1, conds) + " 项）"
+    : (conds.length ? "" : "至少勾选一个条件");
+}
+
+// ---- 过筛 ----
+var running = false;
+function run() {
+  if (running) return;
+  var codes = parseCodes($("codes").value).slice(0, MAX_SYMBOLS);
+  var conds = selectedConds();
+  var hint = $("parse-hint");
+  if (!codes.length) {
+    hint.className = "hint bad";
+    hint.textContent = "没有识别到 6 位代码，请粘贴 A 股代码";
+    return;
+  }
+  if (!conds.length) {
+    hint.className = "hint bad";
+    hint.textContent = "至少勾选一个条件";
+    return;
+  }
+  try { localStorage.setItem("screener_v1", JSON.stringify(
+    { codes: $("codes").value, conds: conds })); } catch (e) { /* 隐私模式忽略 */ }
+
+  running = true;
+  $("run").disabled = true;
+  hint.className = "hint";
+  hint.textContent = "";
+
+  // 占位行：按输入顺序固定，谁先回来谁先填充
+  var done = 0;
+  var results = codes.map(function (code) { return { code: code, status: "loading" }; });
+  var body = $("result-body"), sum = $("result-sum");
+  body.innerHTML = "<table class='grid'><tbody>" + codes.map(function (code) {
+    return "<tr id='row-" + code + "'><td>" + code + "</td><td colspan='8' class='loading'>取数中…</td></tr>";
+  }).join("") + "</tbody></table>";
+  sum.textContent = "已回 0/" + codes.length;
+
+  function onDone() {
+    done += 1;
+    sum.textContent = "已回 " + done + "/" + codes.length;
+    if (done < codes.length) return;
+    render(results, conds);
+    running = false;
+    $("run").disabled = false;
+  }
+
+  codes.forEach(function (code, i) {
+    fetch("/api/screener", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol: code, conditions: conds }),
+    }).then(function (r) {
+      return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+    }).then(function (resp) {
+      if (!resp.ok || resp.data.error) {
+        results[i] = { code: code, status: "error",
+                       message: (resp.data && resp.data.error) || "请求失败" };
+      } else {
+        results[i] = resp.data;
+      }
+      var row = $("row-" + code);
+      if (row) row.cells[1].textContent = results[i].status === "error"
+        ? results[i].message : (results[i].passed === true ? "✓ 已回"
+                               : results[i].passed === false ? "✗ 未过" : "数据不足");
+      onDone();
+    }).catch(function (exc) {
+      results[i] = { code: code, status: "error", message: String(exc) };
+      onDone();
+    });
+  });
+}
+
+// ---- 最终渲染：通过列表（按股息率降序）+ 未通过折叠 ----
+var COLUMNS = [
+  { key: "yield_ttm", label: "股息率", cond: "yield_ge3" },
+  { key: "payout_ttm", label: "派息率", cond: "payout_30_70" },
+  { key: "div_years", label: "连续年数", cond: "div_years_ge3" },
+  { key: "close", label: "现价", cond: null },
+  { key: "dist_ma20", label: "距MA20", cond: "above_ma20" },
+  { key: "chg20d", label: "近20日涨幅", cond: "chg20_le10" },
+  { key: "stable", label: "股息稳定", cond: "stable_yield" },
+];
+
+function render(results, conds) {
+  var passed = [], failed = [], insufficient = [];
+  results.forEach(function (r) {
+    if (r.status === "error") { insufficient.push(r); return; }
+    if (r.passed === true) passed.push(r);
+    else if (r.passed === false) failed.push(r);
+    else insufficient.push(r);
+  });
+  passed.sort(function (a, b) {
+    return (b.metrics.yield_ttm || -1) - (a.metrics.yield_ttm || -1);
+  });
+
+  var sum = $("result-sum");
+  sum.innerHTML = "通过 <b class='pass'>" + passed.length + "</b> · 未通过 "
+    + failed.length + " · 数据不足 " + insufficient.length
+    + "（按股息率降序；高亮列为本次勾选条件）";
+
+  var body = $("result-body");
+  if (!passed.length) {
+    body.innerHTML = "<div class='empty">没有股票通过全部勾选条件</div>";
+  } else {
+    var head = "<tr><th>代码</th><th>名称</th>" + COLUMNS.map(function (col) {
+      return "<th" + (conds.indexOf(col.cond) >= 0 ? " class='on'" : "")
+        + ">" + col.label + "</th>";
+    }).join("") + "</tr>";
+    var rows = passed.map(function (r) {
+      var m = r.metrics || {};
+      var cells = COLUMNS.map(function (col) {
+        var v = m[col.key];
+        if (col.key === "payout_ttm" && v !== null && v !== undefined && v > 1.0) {
+          return "<td class='danger'>" + fmtValue(col.key, v) + " 危险</td>";
+        }
+        if (col.key === "dist_ma20" || col.key === "chg20d") {
+          var cell = pctCell(col.key, v);
+          return "<td" + (cell.cls ? " class='" + cell.cls + "'" : "") + ">"
+            + cell.text + "</td>";
+        }
+        if (col.key === "stable") {
+          return "<td>" + (v === true ? "<span class='ok-mark'>✓</span>"
+            : v === false ? "<span class='no-mark'>✗</span>" : "—") + "</td>";
+        }
+        return "<td>" + fmtValue(col.key, v) + "</td>";
+      }).join("");
+      return "<tr><td>" + esc(r.symbol) + "</td><td class='name'>"
+        + esc(r.name || "—") + "</td>" + cells + "</tr>";
+    }).join("");
+    body.innerHTML = "<table class='grid'><thead>" + head
+      + "</thead><tbody>" + rows + "</tbody></table>";
+  }
+
+  var box = $("failed-box"), fbody = $("failed-body");
+  if (!failed.length && !insufficient.length) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  $("failed-summary").textContent = "未通过 " + failed.length + " 只 · 数据不足 "
+    + insufficient.length + " 只（展开看断在哪个条件）";
+  var frows = failed.map(function (r) {
+    var names = r.failed.map(function (f) { return f.name; }).join("、");
+    var first = r.failed[0];
+    return "<tr><td>" + esc(r.symbol) + "</td><td class='name'>" + esc(r.name || "—")
+      + "</td><td style='text-align:left'>" + esc(names) + "</td><td>"
+      + (first ? fmtValue(first.column, first.value) : "—") + "</td></tr>";
+  });
+  insufficient.forEach(function (r) {
+    frows.push("<tr><td>" + esc(r.code || r.symbol) + "</td><td class='name'>"
+      + esc(r.name || "—") + "</td><td style='text-align:left'>数据不足</td><td>—</td></tr>");
+  });
+  fbody.innerHTML = "<table class='grid'><thead><tr><th>代码</th><th>名称</th>"
+    + "<th style='text-align:left'>未过条件</th><th>该条件数字</th></tr></thead><tbody>"
+    + frows.join("") + "</tbody></table>";
+}
+
+// ---- 事件 ----
+$("codes").addEventListener("input", function () { updateHints(); });
+$("codes").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") run();
+});
+document.querySelectorAll("#conds input").forEach(function (cb) {
+  cb.addEventListener("change", updateHints);
+});
+$("run").addEventListener("click", run);
+
+// ---- 恢复上次输入 ----
+try {
+  var saved = JSON.parse(localStorage.getItem("screener_v1") || "null");
+  if (saved) {
+    if (saved.codes) $("codes").value = saved.codes;
+    if (Array.isArray(saved.conds)) {
+      document.querySelectorAll("#conds input").forEach(function (cb) {
+        cb.checked = saved.conds.indexOf(cb.dataset.cond) >= 0;
+      });
+    }
+  }
+} catch (e) { /* 忽略 */ }
+updateHints();
+$("codes").focus();
+
+// ---- demo 徽章 + 体验 Key 提示（每会话一次）----
+fetch("/api/appinfo").then(function (r) { return r.json(); }).then(function (info) {
+  if (info.demo) {
+    $("demo-badge").textContent = "演示数据";
+    $("key-badge").textContent = "";
+  } else {
+    $("key-badge").textContent = info.trial ? "" : "finpipe 实时数据";
+    if (!info.trial || sessionStorage.getItem("trialKeyHintDismissed")) return;
+    var mask = document.createElement("div");
+    mask.id = "trial-mask";
+    mask.innerHTML = "<div class='box'><b>你正在使用内置体验 Key</b><br>"
+      + "体验额度是共享池，容易限流。配置自己的 AppID 后额度独立、不再提示。"
+      + "<div class='btns'><button id='trial-later'>暂不</button>"
+      + "<button id='trial-go' class='primary'>去配置 →</button></div></div>";
+    document.body.appendChild(mask);
+    mask.addEventListener("click", function (e) {
+      if (e.target.id === "trial-later" || e.target === mask) {
+        try { sessionStorage.setItem("trialKeyHintDismissed", "1"); } catch (err) { }
+        mask.remove();
+      } else if (e.target.id === "trial-go") {
+        try { sessionStorage.setItem("trialKeyHintDismissed", "1"); } catch (err) { }
+        location.href = "/setup.html";
+      }
+    });
+  }
+}).catch(function () { /* Pyodide 未就绪等场景忽略 */ });
+</script>
+</body>
+</html>
