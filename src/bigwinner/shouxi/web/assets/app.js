@@ -1807,9 +1807,11 @@
 
     // Key 状态徽章（右上角，一眼看清数据源）
     api('key-status').then((s) => {
-      document.getElementById('key-badge').innerHTML = s.custom
-        ? '<span class="badge ok">已用自己的 Key</span>'
-        : '<span class="badge warn">共享体验 Key · 额度有限</span>';
+      document.getElementById('key-badge').innerHTML = s.demo
+        ? '<span class="badge ok">演示模式 · 内置样例数据（非实时）</span>'
+        : s.custom
+          ? '<span class="badge ok">已用自己的 Key</span>'
+          : '<span class="badge warn">共享体验 Key · 额度有限</span>';
     }).catch(() => {});
 
     // 「更多」折叠
