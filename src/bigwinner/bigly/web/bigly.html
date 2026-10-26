@@ -4,45 +4,177 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>波段 · 估值买卖点区间与拨测</title>
-<link rel="stylesheet" href="/assets/base.css">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script>/* 单 CDN 挂了会白图：jsdelivr 失败时回退 unpkg */
 window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/dist/echarts.min.js"><\/script>');</script>
+<!-- 本页样式自包含（不依赖门户 base.css）：视觉语言对齐 winmale-v2「波段操作」页。
+     门户 /assets 只服务 shouxi 那份 base.css，引它会被静默串样式——别改回去。 -->
 <style>
-  .banner{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;
-    color:#b91c1c;padding:10px 14px;border-radius:8px;margin:12px 0;font-size:13.5px;
-    font-weight:650}
+  :root{
+    --bg:#f8fafc; --surface:#ffffff; --surface-2:#f1f5f9;
+    --line:#e2e8f0; --line-strong:#cbd5e1;
+    --ink:#0f172a; --ink-soft:#64748b;
+    --brand:#2563eb; --brand-hover:#1d4ed8; --brand-soft:#dbeafe;
+    --rise:#ef4444;            /* 红涨 */
+    --fall:#10b981;            /* 绿跌 */
+    --warn:#b45309; --warn-soft:#fef3c7;
+    --danger:#dc2626;
+    --radius:12px; --radius-sm:8px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,
+      "PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+    font-size:14px;line-height:1.6;font-feature-settings:"tnum" 1,kern 1;
+    font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+  button{font:inherit;cursor:pointer;border-radius:var(--radius-sm);
+    border:1px solid var(--line-strong);background:var(--surface);
+    color:var(--ink);padding:8px 14px;transition:all .15s ease}
+  button:hover{border-color:var(--ink-soft)}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+  button.primary:hover{background:var(--brand-hover);border-color:var(--brand-hover)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  input{font:inherit;color:var(--ink);background:var(--surface);
+    border:1px solid var(--line-strong);border-radius:9px;
+    padding:7px 10px;transition:border-color .15s,box-shadow .15s}
+  input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+
+  /* ---- 顶栏 ---- */
+  .topbar{border-bottom:1px solid var(--line);background:rgba(255,255,255,.88);
+    backdrop-filter:saturate(180%) blur(12px);position:sticky;top:0;z-index:10}
+  .topbar-inner{max-width:816px;margin:0 auto;padding:14px 24px;
+    display:flex;align-items:center;gap:12px}
+  .brand{font-weight:650;letter-spacing:-.01em;font-size:15px}
+  .brand .dot{color:var(--brand)}
+  .topbar .spacer{flex:1}
+  .topbar .meta{color:var(--ink-soft);font-size:12px}
+
+  /* ---- 页宽：对齐 band-guide 的 max-w-3xl ---- */
+  .wrap{max-width:816px;margin:0 auto;padding:0 24px 72px}
+
+  /* ---- 免责横幅：#dc2626 自绘（语义红，勿用涨跌 token） ---- */
+  .banner{background:rgba(220,38,38,.10);border:1px solid rgba(220,38,38,.35);
+    color:#dc2626;padding:12px 16px;border-radius:10px;margin:16px 0 0;
+    font-size:13.5px;font-weight:700}
   .banner b{font-weight:750}
-  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
-  .seg button{border:none;background:var(--surface);padding:6px 14px;font-size:13px;
-    color:var(--fg);cursor:pointer}
-  .seg button.active{background:var(--accent);color:#fff;font-weight:560}
-  .chart-box{height:300px}
-  .chips{font-size:12.5px;line-height:1.7;border-radius:8px;padding:6px 10px;margin:8px 0;
-    background:#ecfdf5;color:#047857}
-  .chips.relax{background:#fffbeb;color:#92400e}
-  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0}
-  .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  @media (max-width:1080px){.duo{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
-  .safety-warn{border:1.5px solid #dc2626;background:#fef2f2;border-radius:10px}
-  .safety-ok{border:1px solid var(--border);background:var(--surface)}
-  .red-note{color:#dc2626;font-weight:600}
-  .dist-row{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
-  .dist-bar{flex:1;height:8px;border-radius:4px;background:#e2e8f0;position:relative;overflow:hidden}
-  .dist-bar i{position:absolute;top:0;bottom:0;left:50%;background:var(--accent);border-radius:4px}
-  .cmp{width:100%;border-collapse:collapse;font-size:13.5px}
-  .cmp th,.cmp td{border:1px solid var(--border);padding:7px 10px;text-align:center}
-  .cmp th{background:var(--accent-soft);color:var(--accent-hover)}
-  .cmp td.win{background:#ecfdf5;font-weight:640;color:#047857}
-  .dist3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
-  @media (max-width:1080px){.dist3{grid-template-columns:1fr}}
-  .dist3 h3{margin:0 0 6px;font-size:13.5px}
-  .mini{width:100%;border-collapse:collapse;font-size:13px}
-  .mini td{padding:5px 2px;border-bottom:1px dashed var(--border)}
-  .mini td.num{text-align:right;font-weight:600;white-space:nowrap}
-  .sym-box{max-width:180px;flex:none}
-  .verdict{margin-top:8px;font-size:13px;color:#475569}
-  .foot{color:#64748b;font-size:12.5px;margin-top:18px;line-height:1.7}
+
+  .page-head{padding:22px 0 16px}
+  .page-head h1{margin:0 0 6px;font-size:20px;font-weight:700;letter-spacing:-.02em}
+  .page-head p{margin:0;color:var(--ink-soft);font-size:12px}
+
+  /* ---- 卡片 ---- */
+  .card{background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px}
+  .card.danger{border-color:var(--danger)}
+
+  /* ---- 步骤头：brand 圆点编号 + 标题 + hint ---- */
+  .step-head{display:flex;align-items:baseline;gap:8px;margin-bottom:14px}
+  .step-badge{flex:none;width:24px;height:24px;border-radius:50%;
+    background:var(--brand);color:#fff;font-weight:600;font-size:13px;
+    display:flex;align-items:center;justify-content:center;
+    transform:translateY(4px)}
+  .step-head h2{margin:0;font-size:15px;font-weight:600}
+  .step-head .hint{color:var(--ink-soft);font-size:12px}
+
+  /* ---- 控制条 ---- */
+  .controls{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  .controls label{font-size:12px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:8px}
+  .meta{color:var(--ink-soft);font-size:12px}
+
+  /* ---- Segmented（pill 容器 + 活动页白底） ---- */
+  .seg{display:inline-flex;background:var(--surface-2);
+    border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px}
+  .seg button{border:none;background:transparent;padding:5px 13px;
+    border-radius:6px;font-size:13px;color:var(--ink-soft);font-weight:500}
+  .seg button:hover{color:var(--ink)}
+  .seg button.active{background:var(--surface);color:var(--brand);
+    box-shadow:0 1px 3px rgba(15,23,42,.10)}
+
+  /* ---- 图表 ---- */
+  .chart-box{height:320px}
+
+  /* ---- KPI 五格小卡 ---- */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
+  .kpi{border-radius:10px;background:rgba(15,23,42,.03);padding:8px 12px}
+  .kpi .label{font-size:11px;color:var(--ink-soft)}
+  .kpi .value{margin-top:2px;font-size:13px;font-weight:600}
+  @media (max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+
+  .note{margin:8px 0 0;font-size:12px;color:var(--ink-soft)}
+  .foot-note{margin:10px 0 0;font-size:11px;color:var(--ink-soft)}
+
+  /* ---- 四约束 chips ---- */
+  .chips{font-size:12.5px;line-height:1.7;border-radius:10px;padding:7px 11px;margin:10px 0 0;
+    background:rgba(16,185,129,.10);color:#047857}
+  .chips.relax{background:var(--warn-soft);color:var(--warn)}
+
+  /* ---- 买卖价双卡 ---- */
+  .level-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .level-card{border:1px solid var(--line);border-radius:10px;padding:12px}
+  .level-card .k{font-size:12px;color:var(--ink-soft)}
+  .level-card .v{margin-top:2px;font-size:19px;font-weight:600}
+  .level-card .sub{margin-top:2px;font-size:11px;color:var(--ink-soft)}
+  .level-card.buy{border-color:var(--brand)}
+  .level-card.buy .v{color:var(--brand)}
+  .level-card.sell{border-color:var(--rise)}
+  .level-card.sell .v{color:var(--rise)}
+  @media (max-width:560px){.level-cards{grid-template-columns:1fr}}
+
+  .danger-note{margin:12px 0 0;border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;
+    background:rgba(220,38,38,.10);color:#dc2626}
+
+  /* ---- 对比表：无边框极简风 ---- */
+  table.cmp{width:100%;border-collapse:collapse;font-size:13px}
+  .cmp th{text-align:left;font-weight:400;color:var(--ink-soft);padding:6px 4px;white-space:nowrap}
+  .cmp td{padding:6px 4px;border-top:1px solid var(--line)}
+  .cmp td.num,.cmp th.num{text-align:right;white-space:nowrap}
+  .cmp .win{font-weight:650;color:#047857}
+  .cmp .is-good{color:#047857}
+
+  /* ---- 交易记录折叠 ---- */
+  details.fills{margin-top:12px}
+  details.fills summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--ink);
+    list-style:none;display:flex;align-items:center;gap:6px}
+  details.fills summary::-webkit-details-marker{display:none}
+  details.fills summary::after{content:"›";transform:rotate(90deg);color:var(--ink-soft)}
+  details.fills[open] summary::after{transform:rotate(-90deg)}
+  .fills-wrap{max-height:224px;overflow-y:auto;margin-top:8px}
+  table.fills{width:100%;border-collapse:collapse;font-size:12px}
+  .fills th{text-align:left;font-weight:400;color:var(--ink-soft);padding:4px}
+  .fills td{padding:4px;border-top:1px solid var(--line)}
+  .fills td.num{text-align:right}
+  .fills .is-buy{color:var(--rise)}
+  .fills .is-sell{color:var(--fall)}
+
+  /* ---- 双列区 ---- */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:820px){.duo{grid-template-columns:1fr}}
+  .duo .line-row{font-size:13px;line-height:1.8}
+  .duo ul{margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--danger)}
+
+  /* ---- 页脚算法说明 ---- */
+  .foot{margin-top:24px;border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;font-size:12px;line-height:1.9;color:var(--ink-soft)}
+  .foot b{color:var(--ink)}
+
+  /* ---- 代码搜索联想 ---- */
+  .sym-box{position:relative;max-width:190px;flex:none}
+  .sym-box input{width:150px;padding:6px 9px;font-size:13.5px}
+  .sym-dropdown{position:absolute;top:100%;left:0;right:0;z-index:20;
+    margin-top:6px;background:var(--surface);
+    border:1px solid var(--line-strong);border-radius:8px;
+    box-shadow:0 12px 32px -12px rgba(15,23,42,.22);
+    overflow:hidden;max-height:300px;overflow-y:auto}
+  .sym-item{display:flex;align-items:baseline;gap:12px;
+    padding:9px 14px;cursor:pointer;font-size:14px}
+  .sym-item:hover,.sym-item.active{background:var(--brand-soft)}
+  .sym-code{font-variant-numeric:tabular-nums;color:var(--brand);
+    font-weight:600;min-width:56px;font-size:13.5px}
+  .sym-name{color:var(--ink)}
+  .sym-empty{padding:14px;color:var(--ink-soft);font-size:13px;text-align:center}
+  .sym-fresh{padding:7px 14px;border-top:1px solid var(--line);
+    color:var(--ink-soft);font-size:11.5px;background:var(--surface-2)}
 </style>
 </head>
 <body>
@@ -62,136 +194,124 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
     买卖点由你自己设定与负责。历史表现不代表未来。</div>
 
   <div class="page-head">
-    <h1>波段 <span style="font-size:15px;color:#64748b">Bigly</span></h1>
-    <p>估值通道 · 买卖点参考 · 拨测回看 —— 看清位置，再设点；设完先回拨，再谈收益。</p>
+    <h1>波段操作 · 估值买卖点</h1>
+    <p>三步看懂波段：① 看估值通道，判断现在贵不贵 → ② 设买卖区间 → ③ 用历史数据回放验证。</p>
   </div>
 
   <!-- 控制条 -->
   <section class="card">
-    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+    <div class="controls">
       <label>代码
-        <span class="search-box sym-box" id="sym-box">
+        <span class="sym-box" id="sym-box">
           <input id="sym" value="600519" autocomplete="off" spellcheck="false"
-                 style="padding:6px 8px;width:130px" placeholder="代码 / 名称 / 拼音">
+                 placeholder="代码 / 名称 / 拼音">
         </span>
       </label>
-      <span>指标
+      <label>指标
         <span class="seg" id="seg-metric">
           <button data-v="pe" class="active">PE</button>
           <button data-v="pb">PB</button>
         </span>
-      </span>
-      <span>窗口（上限 3 年，默认半年）
+      </label>
+      <label>窗口
         <span class="seg" id="seg-window">
           <button data-v="6m" class="active">半年</button>
           <button data-v="1y">1 年</button>
           <button data-v="2y">2 年</button>
           <button data-v="3y">3 年</button>
         </span>
-      </span>
+      </label>
       <span id="load-note" class="meta"></span>
     </div>
   </section>
 
-  <!-- ① 通道主图 -->
-  <section class="card">
+  <!-- ① 看估值通道 -->
+  <section class="card" style="margin-top:16px">
     <div class="step-head">
       <span class="step-badge">1</span>
-      <div><h2>估值通道</h2>
-        <p class="step-sub">均值 ± Nσ 通道（σ=窗口内总体标准差，下轨截 0）；琥珀虚线=均值，靛蓝虚线=中位</p>
-      </div>
+      <h2>看估值通道</h2>
+      <span class="hint">当前估值相对历史位置</span>
     </div>
     <div id="chart" class="chart-box"></div>
+    <div class="kpis" id="kpis"></div>
+    <p class="note" id="channel-note"></p>
   </section>
 
-  <!-- ② 状态条 -->
-  <div class="kpis" id="kpis"></div>
+  <!-- ② 设买卖区间 -->
+  <section class="card" style="margin-top:16px">
+    <div class="step-head">
+      <span class="step-badge">2</span>
+      <h2>设买卖区间</h2>
+      <span class="hint">推荐区间由历史回放自动搜点，可切换自定义</span>
+    </div>
+    <div style="margin-bottom:4px">
+      <span class="seg" id="seg-source">
+        <button data-v="suggest" class="active">推荐区间</button>
+        <button data-v="user">自定义区间</button>
+      </span>
+    </div>
+    <div id="user-inputs" style="display:none;margin-top:10px">
+      <label style="font-size:12px;color:var(--ink-soft)">低买倍数
+        <input id="in-low" type="number" step="0.1" style="width:84px;margin-left:6px"></label>
+      <label style="font-size:12px;color:var(--ink-soft);margin-left:14px">高卖倍数
+        <input id="in-high" type="number" step="0.1" style="width:84px;margin-left:6px"></label>
+    </div>
+    <div id="levels-body"><p class="meta">加载通道后展示。</p></div>
+    <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+      <label style="font-size:12px;color:var(--ink-soft)">止损价（可选）
+        <input id="in-stop" type="number" step="0.01" style="width:96px;margin-left:6px"></label>
+    </div>
+  </section>
 
-  <div class="duo">
-    <!-- ③ 安全边界卡 -->
+  <!-- ③ 历史回放 -->
+  <section class="card" id="result-card" style="display:none;margin-top:16px">
+    <div class="step-head">
+      <span class="step-badge">3</span>
+      <h2>用历史数据回放</h2>
+      <span class="hint">同一窗口内，按这套买卖点走一遍会怎样</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button class="primary" id="btn-bt">跑一次历史回放</button>
+      <span id="bt-note" class="meta"></span>
+    </div>
+    <div id="result-body" style="margin-top:12px"></div>
+    <p class="foot-note">本结果为统计描述与历史回放，不构成投资建议；买卖点由你自己设定与负责。</p>
+  </section>
+
+  <!-- 双列区：区间分布与极值 + 安全边界 -->
+  <div class="duo" style="margin-top:16px">
+    <section class="card" id="dist-card" style="display:none">
+      <div class="step-head">
+        <span class="step-badge">📊</span>
+        <h2>区间分布与极值</h2>
+      </div>
+      <div class="line-row" id="dist-body"></div>
+    </section>
+
     <section class="card" id="safety-card">
       <div class="step-head">
         <span class="step-badge">⚠</span>
-        <div><h2>安全边界</h2>
-          <p class="step-sub">描述性统计：历史上「买在类似位置」之后发生了什么</p>
-        </div>
+        <h2>安全边界</h2>
       </div>
-      <div id="safety-body"><p class="meta">加载通道后展示。</p></div>
-    </section>
-
-    <!-- ④ 买卖点卡 -->
-    <section class="card">
-      <div class="step-head">
-        <span class="step-badge">2</span>
-        <div><h2>设置买卖点</h2>
-          <p class="step-sub">默认推荐区间（不高估、距最低点不太远、亏损时间不过长、成交次数不过少）；
-             也可切换自定义区间，自填低买 / 高卖倍数</p>
-        </div>
-      </div>
-      <div style="margin-bottom:10px">
-        <span class="seg" id="seg-source">
-          <button data-v="suggest" class="active">推荐区间</button>
-          <button data-v="user">自定义区间</button>
-        </span>
-      </div>
-      <div id="user-inputs" style="display:none;margin-bottom:10px">
-        <label>低买倍数 <input id="in-low" type="number" step="0.1" style="width:80px"></label>
-        <label style="margin-left:12px">高卖倍数 <input id="in-high" type="number" step="0.1" style="width:80px"></label>
-        <p class="meta" style="margin:6px 0 0">换算假设口径内 EPS/BPS 恒定；金融/亏损股建议用 PB。</p>
-      </div>
-      <div id="levels-body"><p class="meta">加载通道后展示。</p></div>
-      <div style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px">
-        <label>止损价（可选）<input id="in-stop" type="number" step="0.01" style="width:90px"></label>
-        <button class="primary" id="btn-bt" style="margin-left:12px">开始回拨</button>
-        <span id="bt-note" class="meta"></span>
-      </div>
+      <div class="line-row" id="safety-body"><p class="meta">加载通道后展示。</p></div>
     </section>
   </div>
 
-  <!-- ⑤ 区间分布与极值 -->
-  <section class="card" id="dist-card" style="display:none">
-    <div class="step-head">
-      <span class="step-badge">📊</span>
-      <div><h2>区间分布与极值</h2>
-        <p class="step-sub">窗口内逐日统计：估值三区分布 · 股价相对当前买卖点 · 距极值溢出</p>
-      </div>
-    </div>
-    <div class="dist3">
-      <div><h3>估值倍数（<span id="dist-metric-n">—</span>）</h3>
-        <table class="mini"><tbody id="col-metric"></tbody></table></div>
-      <div><h3>股价 × 买卖点（<span id="dist-price-n">—</span>）</h3>
-        <table class="mini"><tbody id="col-price"></tbody></table></div>
-      <div><h3>股价极值（收盘口径）</h3>
-        <table class="mini"><tbody id="col-extremes"></tbody></table></div>
-    </div>
-  </section>
-
-  <!-- ⑥ 拨测结果：波段 vs 长持 -->
-  <section class="card" id="result-card" style="display:none">
-    <div class="step-head">
-      <span class="step-badge">3</span>
-      <div><h2>拨测结果：波段 vs 长持</h2>
-        <p class="step-sub">同窗口历史回放；长持基准 = 首日收盘买入持有至窗口末（不含现金收益）</p>
-      </div>
-    </div>
-    <div id="result-body"></div>
-  </section>
-
-  <p class="foot">
+  <div class="foot">
     <b>算法说明</b>：估值通道 = 均值 ± Nσ（σ 为窗口内总体标准差 ÷N，下轨截 0），与平台 web「估值通道」同源；
     买卖点换算 = 现价 × 目标倍数 / 当前倍数（隐含口径内 EPS/BPS 恒定）。窗口 6 个月/1/2/3 年（上限 3 年），默认半年，进页自动加载。
     <b>推荐区间</b> = 窗口内穷举候选买卖倍数组合，须满足四条约束：买点不高于均值（不高估）、
     买入价距窗口最低收盘 ≤15%（距最低点不要太远）、亏损持仓日占窗口 ≤35%（亏损时间不要过长）、
     完整进出 ≥2 次（成交次数不要太少）；在满足约束的组合中按多轮回放收益择优（同收益取进出更多者），
     无组合满足时逐级放宽并如实标注，全程无完整进出则回退通道轨。
-    <b>拨测规则</b>：日 low≤买点触发买入（成交 min(open,买点)）；持仓日 high≥卖点止盈（max(open,卖点)）、
+    <b>回放规则</b>：日 low≤买点触发买入（成交 min(open,买点)）；持仓日 high≥卖点止盈（max(open,卖点)）、
     low≤止损止损（min(open,止损)）；同日双触发按保守先止损；T+1 买入当日不卖；
     止盈/止损出场后资金回笼，卖出次日可再次买入，回放窗口内全部进出；
     多轮收益按各轮复利（空仓期收益 0，不含现金利息）。
     <b>简化假设</b>：不含涨跌停与成交量约束；qfq 前复权口径已消除除权跳空。
     <br><b>免责声明</b>：本工具全部输出为统计描述与历史回放，不构成任何投资建议；
     买卖点由你自己设定与负责；历史表现不代表未来；数据以上市公司公告与平台数据源为准。
-  </p>
+  </div>
 </main>
 
 <script>
@@ -199,7 +319,6 @@ const $ = (id) => document.getElementById(id);
 const pctText = (v, digits=1) => v == null ? "—" : (v * 100).toFixed(digits) + "%";
 const pctileText = (v) => v == null ? "—" : (v * 100).toFixed(0) + "%";
 const zoneText = {belowLow:"低于低估线", low:"偏低", normal:"正常区间", high:"偏高", aboveHigh:"高于高估线"};
-const zoneCls = {belowLow:"badge ok", low:"badge ok", normal:"badge", high:"badge warn", aboveHigh:"badge warn"};
 let chart = null, state = {symbol:null, metric:"pe", window:"6m",
   channel:null, levels:null, suggest:null, last_close:null, sym_name:null,
   metricOverride:false};
@@ -269,9 +388,9 @@ async function load(){
   await autoBacktest();
 }
 
-// 自动模式：后端先搜索推荐区间，再按推荐值回拨（无推荐时回退通道轨）
+// 自动模式：后端先搜索推荐区间，再按推荐值回放（无推荐时回退通道轨）
 async function autoBacktest(){
-  $("bt-note").textContent = "搜索推荐区间并回拨…";
+  $("bt-note").textContent = "搜索推荐区间并回放…";
   const r = await post("/api/bigly/backtest", {symbol: state.symbol, metric: state.metric,
                                                window: state.window});
   if(r.error){ $("bt-note").textContent = r.error; return; }
@@ -360,22 +479,44 @@ document.addEventListener("click", (e) => {
   if(symDrop && !$("sym-box").contains(e.target)) closeSymDrop();
 });
 
+/* 通道配色：与 winmale-v2 percentileBand.bandPalette(light) 同款
+   （canvas 不认 CSS 变量，成对硬编码——本页现只浅色） */
+const PAL = {
+  main:"#334155", neutralFill:"rgba(37,99,235,0.10)",
+  lowFill:"rgba(16,185,129,0.14)", highFill:"rgba(239,68,68,0.14)",
+  inner:"#64748b", outerLow:"#10b981", outerHigh:"#ef4444",
+  avg:"#d97706", median:"#6366f1", current:"#dc2626",
+};
+
 function drawChart(r){
   const pts = r.series.map(p => [p[0] * 1000, p[1]]);
   if(!pts.length) return;
   const t0 = pts[0][0], t1 = pts[pts.length - 1][0];
   const mainName = (r.metric || "pe").toUpperCase();
-  // 横向轨线必须带时间坐标（两点式）：纯数值序列会把时间轴拉到 1970
-  const rule = (v, name, color, dash, width) => ({type:"line", data:[[t0, v], [t1, v]], name,
-    symbol:"none", lineStyle:{color, width: width||1.5, type: dash?"dashed":"solid"}, silent:true});
   const c = r.channel;
+  const bandArea = (name, lo, hi, fill) => ([
+    // 透明基线 + 面积（stack）：低估/中性/高估三层
+    {type:"line", name:`__band_base_${name}`, data:[[t0, lo], [t1, lo]],
+     stack:"band_" + name, lineStyle:{opacity:0}, symbol:"none", silent:true, z:1},
+    {type:"line", name:`__band_${name}`, data:[[t0, hi], [t1, hi]],
+     stack:"band_" + name, lineStyle:{opacity:0}, symbol:"none", silent:true, z:1,
+     areaStyle:{color:fill, opacity:1}},
+  ]);
+  const rule = (v, name, color, type, width, opacity) => ({type:"line", name,
+    data:[[t0, v], [t1, v]], symbol:"none",
+    lineStyle:{color, width: width || 1, type: type || "dashed",
+               opacity: opacity == null ? 1 : opacity},
+    silent:true, z:3});
   chart = chart || echarts.init($("chart"));
   chart.setOption({
     animation:false,
-    grid:{left:52, right:70, top:16, bottom:28},
+    backgroundColor:"transparent",
+    grid:{left:56, right:64, top:16, bottom:52},
     tooltip:{trigger:"axis",
       formatter: (params) => {
-        const arr = Array.isArray(params) ? params : [params];
+        const arr = (Array.isArray(params) ? params : [params])
+          .filter(p => !String(p.seriesName || "").startsWith("__band"));
+        if(!arr.length) return "";
         const m = arr.find(p => p.seriesName === mainName) || arr[0];
         const d = new Date(m.axisValue != null ? m.axisValue : m.value[0]);
         const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -384,24 +525,24 @@ function drawChart(r){
     xAxis:{type:"time"},
     yAxis:{type:"value", scale:true,
       axisLabel:{formatter: v => v.toFixed(2)}},
+    dataZoom:[{type:"inside"}, {type:"slider", height:18, bottom:10}],
     series:[
+      ...bandArea("low", c.lower2, c.lower1, PAL.lowFill),
+      ...bandArea("mid", c.lower1, c.upper1, PAL.neutralFill),
+      ...bandArea("high", c.upper1, c.upper2, PAL.highFill),
+      rule(c.lower2, "低估线 −2σ", PAL.outerLow, "dashed", 1.5, .9),
+      rule(c.upper2, "高估线 +2σ", PAL.outerHigh, "dashed", 1.5, .9),
+      rule(c.lower1, "−1σ", PAL.inner, "dotted", 1, .65),
+      rule(c.upper1, "+1σ", PAL.inner, "dotted", 1, .65),
+      rule(c.avg, "均值", PAL.avg, "dashed"),
+      ...(c.median != null ? [rule(c.median, "中位", PAL.median, "dashed", 1)] : []),
       {type:"line", name: mainName, data:pts, symbol:"none",
-       lineStyle:{color:"#2563eb", width:1.6}, z:5},
-      {type:"line", name:"低估线", data:[[t0, c.lower2], [t1, c.lower2]], symbol:"none",
-       lineStyle:{color:"#16a34a", width:1.6, type:"dashed"}, silent:true,
-       endLabel:{show:true, formatter:"低估线", color:"#16a34a"}},
-      {type:"line", name:"高估线", data:[[t0, c.upper2], [t1, c.upper2]], symbol:"none",
-       lineStyle:{color:"#dc2626", width:1.6, type:"dashed"}, silent:true,
-       endLabel:{show:true, formatter:"高估线", color:"#dc2626"}},
-      rule(c.lower1, "−1σ", "#94a3b8", true),
-      rule(c.upper1, "+1σ", "#94a3b8", true),
-      rule(c.avg, "均值", "#f59e0b", true),
-      ...(c.median != null ? [rule(c.median, "中位", "#6366f1", true, 1)] : []),
+       lineStyle:{color:PAL.main, width:1.6}, z:5},
       {type:"scatter", name:"当前", data:[[t1, c.current]],
-       symbolSize:9, itemStyle:{color:"#dc2626"}, z:10,
-       label:{show:true, formatter:() => c.current.toFixed(2), position:"right", color:"#dc2626"}},
+       symbolSize:9, itemStyle:{color:PAL.current}, z:10,
+       label:{show:true, formatter:() => c.current.toFixed(2), position:"right", color:PAL.current}},
     ],
-  });
+  }, true);
   chart.resize();  // 自动加载早于首帧布局时 init 会拿到 0 宽画布，强制按容器尺寸重排
 }
 
@@ -411,38 +552,39 @@ function renderKpis(r){
   const c = r.channel;
   const kpis = [
     ["当前倍数", c.current.toFixed(2)],
-    ["历史分位", pctileText(c.pct)],
+    ["窗口内分位", pctileText(c.pct)],
     ["z 值 / 分区", `${c.z >= 0 ? "+" : ""}${c.z.toFixed(2)} · ${zoneText[c.zone]}`],
     ["±2σ 覆盖率", pctText(c.coverage)],
     ["min / 中位 / max", `${c.min.toFixed(2)} / ${c.median.toFixed(2)} / ${c.max.toFixed(2)}`],
   ];
   $("kpis").innerHTML = kpis.map(([k, v]) =>
     `<div class="kpi"><div class="label">${k}</div><div class="value">${v}</div></div>`).join("");
+  $("channel-note").textContent =
+    `当前 ${(r.metric || state.metric || "pe").toUpperCase()} 处于「${zoneText[c.zone]}」；` +
+    `通道 = 均值 ±2σ（${c.sigma.toFixed(2)}），下轨截 0；±2σ 覆盖率 ${pctText(c.coverage)}。`;
 }
 
 function renderSafety(r){
   const c = r.channel, s = r.safety || {};
   const card = $("safety-card");
   const highZone = c.z >= 1 || (c.pct != null && c.pct > 0.7);
-  card.className = "card " + (highZone ? "safety-warn" : "safety-ok");
-  let html = "";
+  card.classList.toggle("danger", highZone);
+  let html = `<div>当前位置：z=${c.z.toFixed(2)}（${zoneText[c.zone]}）· 窗口内分位 ${pctileText(c.pct)}</div>`;
   if(highZone){
-    html += `<p class="red-note">当前处于历史高位区（z=${c.z.toFixed(2)}，${zoneText[c.zone]}）——
-      追高买入历史上伴随更深的回撤。</p>`;
-  } else {
-    html += `<p>当前位置：${zoneText[c.zone]}（z=${c.z.toFixed(2)}，分位 ${pctileText(c.pct)}）。</p>`;
+    html += `<ul><li>当前处于历史高位区——追高买入历史上伴随更深的回撤。</li></ul>`;
   }
   const st = s.high_entry_drawdown;
   if(st){
-    html += `<p>历史统计：过去 ${r.window} 内，在与当前相似或更高位置介入，
-      此后最大回撤<b>中位 ${pctText(st.median_mdd)}</b>、最差 <b class="red-note">${pctText(st.worst_mdd)}</b>
-      （样本 ${st.sample_n} 个交易日）。</p>`;
+    html += `<div>高位介入回撤：历史上在类似或更高位置买入，此后最大回撤中位
+      <b>${pctText(st.median_mdd)}</b>、最差 <b style="color:var(--danger)">${pctText(st.worst_mdd)}</b>
+      （${st.sample_n} 个样本）。</div>`;
   } else {
-    html += `<p class="meta">高位介入回撤统计：样本不足，暂缺。</p>`;
+    html += `<div class="meta">高位介入回撤统计：样本不足，暂缺。</div>`;
   }
   if(s.stop_reference != null){
-    html += `<p>窗口最低价（历史参考位）：<b>${s.stop_reference.toFixed(2)}</b> 元。</p>`;
+    html += `<div>窗口最低价（历史参考位）：<b>${s.stop_reference.toFixed(2)}</b> 元。</div>`;
   }
+  html += `<div class="meta">以上为描述性统计：历史上「买在类似位置」之后发生了什么——不阻止、也不建议。</div>`;
   $("safety-body").innerHTML = html;
 }
 
@@ -462,8 +604,8 @@ function renderLevels(){
       · 距窗口最低收盘 ${nearTxt}${c.near_low_pct > 0.15 ? "（放宽）" : ""}
       · 亏损持仓占比 ${(c.underwater_ratio * 100).toFixed(0)}%${c.underwater_ratio > 0.35 ? "（放宽）" : ""}
       · 完整进出 ${c.roundtrips_done} 次${c.roundtrips_done < 2 ? "（放宽）" : ""}</div>
-      <p class="meta">${sug.note}</p>
-      <p class="meta">该区间本窗口回放（多轮进出）：收益 <b>${fmtPct(sug.stats.return_pct)}</b> ·
+      <p class="note">${sug.note}</p>
+      <p class="note">该区间本窗口回放（多轮进出）：收益 <b>${fmtPct(sug.stats.return_pct)}</b> ·
         回撤 ${fmtPct(sug.stats.mdd)} · 持仓 ${sug.stats.days_held != null ? sug.stats.days_held + " 天" : "—"}</p>`;
   } else if(source === "suggest"){
     buy = L.buy_price; sell = L.sell_price;
@@ -478,23 +620,25 @@ function renderLevels(){
   }
   const dB = buy ? buy / state.last_close - 1 : null;
   const dS = sell ? sell / state.last_close - 1 : null;
-  const bar = (d) => {
-    if(d == null) return "";
-    const w = Math.min(Math.abs(d) * 5 * 100 / 2, 50);
-    const st = d >= 0 ? "left:50%" : "right:50%";  // 中点=现价，向目标价所在侧生长
-    return `<div class="dist-row"><span>${d >= 0 ? "现价上方 " : "现价下方 "}${Math.abs(d*100).toFixed(1)}%</span>
-      <span class="dist-bar"><i style="${st};width:${w}%"></i></span></div>`;
-  };
+  const m = state.metric.toUpperCase();
+  const multBuy = source === "suggest" && sug ? sug.buy_multiple.toFixed(2) : L.low_multiple.toFixed(2);
+  const multSell = source === "suggest" && sug ? sug.sell_multiple.toFixed(2) : L.high_multiple.toFixed(2);
   $("levels-body").innerHTML = `
-    <p>来源：<b>${srcLabel}</b> ·
-      当前倍数 ${L.metric_current.toFixed(2)}</p>
-    <p>低买 <b>${source === "suggest" && sug ? sug.buy_multiple.toFixed(2) : L.low_multiple.toFixed(2)}</b> → 买入参考价
-      <b class="red-note" style="color:#16a34a">${buy ? buy.toFixed(2) : "—"}</b> 元
-      ${bar(dB)}</p>
-    <p>高卖 <b>${source === "suggest" && sug ? sug.sell_multiple.toFixed(2) : L.high_multiple.toFixed(2)}</b> → 卖出参考价
-      <b style="color:#dc2626">${sell ? sell.toFixed(2) : "—"}</b> 元
-      ${bar(dS)}</p>
-    ${extra || `<p class="meta">${L.assumption}</p>`}`;
+    <p class="note" style="margin-top:10px">来源：${srcLabel} · 当前倍数 ${L.metric_current.toFixed(2)}</p>
+    <div class="level-cards">
+      <div class="level-card buy">
+        <div class="k">参考买入价</div>
+        <div class="v">${buy ? buy.toFixed(2) : "—"}</div>
+        <div class="sub">${m} ${multBuy} · 距现价 ${fmtPct(dB)}</div>
+      </div>
+      <div class="level-card sell">
+        <div class="k">参考卖出价</div>
+        <div class="v">${sell ? sell.toFixed(2) : "—"}</div>
+        <div class="sub">${m} ${multSell} · 距现价 ${fmtPct(dS)}</div>
+      </div>
+    </div>
+    ${extra || `<p class="note">${L.assumption}</p>`}
+    <p class="foot-note">换算假设口径内 EPS/BPS 恒定；金融/亏损股建议用 PB。参考价来自历史统计，不是挂单建议。</p>`;
   state.levels._buy = buy; state.levels._sell = sell;
 }
 
@@ -502,7 +646,7 @@ $("btn-bt").onclick = async () => {
   if(!state.channel){ $("bt-note").textContent = "请先加载通道"; return; }
   const buy = state.levels._buy, sell = state.levels._sell;
   if(!buy || !sell){ $("bt-note").textContent = "买卖价位无效"; return; }
-  $("bt-note").textContent = "回拨中…";
+  $("bt-note").textContent = "回放中…";
   const payload = {symbol: state.symbol, metric: state.metric, window: state.window,
                    buy, sell};
   const stop = parseFloat($("in-stop").value);
@@ -513,85 +657,94 @@ $("btn-bt").onclick = async () => {
   renderResult(r);
 };
 
+let distBaseHtml = "";  // 估值三区+极值基线；股价三区由回放结果重挂，避免重跑重复追加
+
 function renderDist(r){
   $("dist-card").style.display = "block";
   const c = r.channel, z = c.zones, ex = r.extremes || {};
-  const m = (r.metric || "pe").toUpperCase();
   const fmtDate = (d) => d ? String(d).slice(5) : "—";
-  const row = (label, d) => `<tr><td>${label}</td><td class="num">${d && d.ratio != null
-    ? `${d.days} 天 · ${(d.ratio * 100).toFixed(0)}%` : "—"}</td></tr>`;
-  $("dist-metric-n").textContent = `窗口 ${z ? z.n : "—"} 日`;
-  $("col-metric").innerHTML =
-    row(`低于低估线 ${c.lower2.toFixed(2)}`, z && z.below_low)
-    + row("通道内（±2σ）", z && z.inside)
-    + row(`高于高估线 ${c.upper2.toFixed(2)}`, z && z.above_high);
+  const seg = (d) => d && d.ratio != null ? `${d.days} 天（${(d.ratio * 100).toFixed(0)}%）` : "—";
+  let html = `<div>估值三区：低于低估线 ${seg(z && z.below_low)} ·
+    通道内（±2σ） ${seg(z && z.inside)} ·
+    高于高估线 ${seg(z && z.above_high)}</div>`;
   const lo = ex.low, hi = ex.high;
-  const row2 = (label, v) => `<tr><td>${label}</td><td class="num">${v}</td></tr>`;
-  $("col-extremes").innerHTML =
-    row2(`最低 ${lo ? lo.price.toFixed(2) : "—"}（${lo ? fmtDate(lo.date) : "—"}）`,
-      lo && lo.premium_pct != null ? `现价溢价 +${(lo.premium_pct * 100).toFixed(1)}%` : "—")
-    + row2(`最高 ${hi ? hi.price.toFixed(2) : "—"}（${hi ? fmtDate(hi.date) : "—"}）`,
-      hi && hi.discount_pct != null ? `现价距高点 ${(hi.discount_pct * 100).toFixed(1)}%` : "—")
-    + row2("现价", ex.last_close != null ? ex.last_close.toFixed(2) : "—");
-  $("col-price").innerHTML = `<tr><td class="meta">回拨后按当前买卖点统计。</td></tr>`;
-  $("dist-price-n").textContent = "回拨后展示";
+  if(lo || hi){
+    html += `<div>窗口最低 ${lo ? lo.price.toFixed(2) : "—"}（${lo ? fmtDate(lo.date) : "—"}${
+        lo && lo.premium_pct != null ? `，现价溢价 +${(lo.premium_pct * 100).toFixed(1)}%` : ""}）；
+      最高 ${hi ? hi.price.toFixed(2) : "—"}（${hi ? fmtDate(hi.date) : "—"}）</div>`;
+  }
+  distBaseHtml = html;
+  $("dist-body").innerHTML = html;
 }
 
 function renderPriceStats(ps){
   if(!ps) return;
-  const row = (label, d) => `<tr><td>${label}</td><td class="num">${d && d.ratio != null
-    ? `${d.days} 天 · ${(d.ratio * 100).toFixed(0)}%` : "—"}</td></tr>`;
-  $("dist-price-n").textContent = `窗口 ${ps.n} 日`;
-  $("col-price").innerHTML =
-    row(`低于买点 ${ps.buy_price.toFixed(2)}`, ps.below_buy)
-    + row("买点 ~ 卖点之间", ps.inside)
-    + row(`高于卖点 ${ps.sell_price.toFixed(2)}`, ps.above_sell);
+  const seg = (d) => d && d.ratio != null ? `${d.days} 天（${(d.ratio * 100).toFixed(0)}%）` : "—";
+  const priceHtml = `<div>股价三区：低于买点 ${seg(ps.below_buy)} ·
+      买卖点之间 ${seg(ps.inside)} ·
+      高于卖点 ${seg(ps.above_sell)}</div>`;
+  $("dist-body").innerHTML = distBaseHtml + priceHtml;
 }
 
 function renderResult(r){
   renderPriceStats(r.price_stats);
   $("result-card").style.display = "block";
-  $("result-card").scrollIntoView({behavior:"smooth", block:"nearest"});
   const bt = r.backtest, cmp = r.compare || {};
   const sw = cmp.swing || {}, hd = cmp.hold || {}, d = cmp.delta || {};
-  const swingLabel = r.suggest ? "波段（推荐区间）" : "波段（你的买卖点）";
   const winSwing = d.return_spread != null && d.return_spread >= 0;
   const winHold = d.return_spread != null && d.return_spread < 0;
-  let stopRow = "";
-  if(bt.sell_reason === "stop"){
-    stopRow = `<tr><td>止损</td><td class="red-note">已触发（${bt.sell_date}）</td><td>—</td><td>—</td></tr>`;
-  }
-  const uwRow = (r.suggest && bt.underwater_days != null)
-    ? `<tr><td>亏损持仓</td><td>${bt.underwater_days} / ${bt.window.bars} 个交易日
-        （收盘低于买价）</td><td>—</td><td>—</td></tr>` : "";
+  const swingLabel = r.suggest ? "波段（这套买卖点）" : "波段（你的买卖点）";
   $("result-body").innerHTML = `
+    ${cmp.verdict ? `<p style="margin:0 0 10px;font-size:13.5px;font-weight:550">${cmp.verdict}</p>` : ""}
     <table class="cmp">
-      <tr><th>维度</th><th>${swingLabel}</th><th>长持（同期一动不动）</th><th>差值</th></tr>
-      <tr><td>区间收益</td>
-        <td class="${winSwing ? "win" : ""}">${fmtPct(sw.return_pct)}</td>
-        <td class="${winHold ? "win" : ""}">${fmtPct(hd.return_pct)}</td>
-        <td>${d.return_spread != null ? fmtPct(d.return_spread) : "—"}</td></tr>
-      <tr><td>最大回撤</td>
-        <td>${fmtPct(sw.mdd)}</td><td>${fmtPct(hd.mdd)}</td>
-        <td>${d.mdd_spread != null ? fmtPct(d.mdd_spread) : "—"}</td></tr>
-      <tr><td>持仓天数</td>
-        <td>${sw.days_held != null ? sw.days_held : "—"}（空仓 ${pctText(sw.flat_ratio)}）</td>
-        <td>${hd.days || "—"} 天（100%）</td><td>—</td></tr>
-      <tr><td>触发</td>
-        <td>${bt.hit_buy
-          ? `${bt.roundtrips_done || 0} 次完整进出 · 首买 ${bt.buy_date}${bt.still_holding ? "（窗口末仍持仓）" : ""}`
-          : "未触发买入"}</td>
-        <td>—</td><td>—</td></tr>
-      ${uwRow}
-      ${stopRow}
+      <thead><tr>
+        <th>口径</th><th class="num">区间收益</th><th class="num">最大回撤</th>
+        <th class="num">持仓天数</th><th class="num">完整进出</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>${swingLabel}</td>
+          <td class="num ${winSwing ? "win" : ""}">${fmtPct(sw.return_pct)}</td>
+          <td class="num">${fmtPct(sw.mdd)}</td>
+          <td class="num">${sw.days_held != null ? sw.days_held : "—"}</td>
+          <td class="num">${bt.roundtrips_done || 0} 次${(bt.stop_count || 0) > 0 || bt.sell_reason === "stop" ? "（含止损）" : ""}</td>
+        </tr>
+        <tr>
+          <td>长持（买入不动）</td>
+          <td class="num ${winHold ? "win" : ""}">${fmtPct(hd.return_pct)}</td>
+          <td class="num">${fmtPct(hd.mdd)}</td>
+          <td class="num">${hd.days || "—"}</td>
+          <td class="num">—</td>
+        </tr>
+      </tbody>
     </table>
-    ${cmp.verdict ? `<p class="verdict">${cmp.verdict}</p>` : ""}
+    ${bt.hit_buy ? "" : `<p class="meta" style="margin-top:8px">窗口内价格从未触及买入参考价。</p>`}
+    ${bt.sell_reason === "stop"
+      ? `<div class="danger-note">这套区间触发过止损（保守口径：同日双触先止损）。历史回放中曾出现较大浮亏，请自行评估。</div>`
+      : ""}
     ${bt.no_stop_worst_drawdown != null
-      ? `<p class="red-note">未设止损：持有期最差浮亏曾达 ${fmtPct(bt.no_stop_worst_drawdown)}。</p>` : ""}
-    <p class="meta">事件：${(bt.events || []).map(e =>
-      `${e.type === "buy" ? "买入" : e.type === "sell" ? "止盈" : "止损"} ${e.date} @ ${e.price}`).join(" → ")
-      || "无触发"}</p>
-    <p class="meta">免责声明：本结果为统计描述与历史回放，不构成投资建议；买卖点由你自己设定与负责。</p>`;
+      ? `<p class="note" style="color:var(--fall)">未设止损：持有期最差浮亏曾达 ${fmtPct(bt.no_stop_worst_drawdown)}（以最低价计）。</p>`
+      : ""}
+    ${(bt.events || []).length ? `
+      <details class="fills">
+        <summary>交易记录（${bt.events.length} 笔${bt.still_holding ? "，最后一笔尚未出场" : ""}）</summary>
+        <div class="fills-wrap">
+          <table class="fills">
+            <thead><tr><th>日期</th><th>操作</th><th class="num">成交价（元）</th></tr></thead>
+            <tbody>
+              ${bt.events.map((e) => `
+                <tr>
+                  <td>${e.date ?? "—"}</td>
+                  <td class="${e.type === "buy" ? "is-buy" : "is-sell"}">${
+                    e.type === "buy" ? "买入" : e.type === "sell" ? "止盈卖出" : "止损卖出"}</td>
+                  <td class="num">${e.price != null ? Number(e.price).toFixed(2) : "—"}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </details>` : ""}
+    ${bt.still_holding ? `<p class="note">窗口末仍持仓：最后一笔买入尚未出场，收益按最新收盘价计浮盈。</p>` : ""}
+    <p class="note">空仓期收益按 0 计（不含现金利息）；长持基准 = 首日收盘买入持有至窗口末。</p>`;
 }
 
 (async () => {
@@ -600,7 +753,7 @@ function renderResult(r){
     if(meta.demo) $("demo-badge").textContent = "演示数据";
     $("key-badge").textContent = meta.demo ? "" : "finpipe 实时数据";
   }catch(e){ /* ignore */ }
-  load();  // 进页自动加载默认标的（半年窗口 → 通道 + 推荐区间 + 回拨直出）
+  load();  // 进页自动加载默认标的（半年窗口 → 通道 + 推荐区间 + 回放直出）
 })();
 </script>
 <script>
