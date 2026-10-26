@@ -185,8 +185,8 @@ function updateHints(rawText) {
       + shown.join(" · ") + (cut ? "（超出 " + MAX_SYMBOLS + " 只，已截取前 " + MAX_SYMBOLS + " 只）" : "");
   }
   quota.textContent = codes.length && conds.length
-    ? "本次约发起 " + callCount(Math.min(codes.length, MAX_SYMBOLS), conds) + " 次查询（"
-      + Math.min(codes.length, MAX_SYMBOLS) + " 票 × " + callCount(1, conds) + " 项）"
+    ? "本次约发起 " + callCount(Math.min(codes.length, MAX_SYMBOLS), conds) + " 次查询（每票 "
+      + callCount(1, conds) + " 次，趋势条件本地计算不耗额度）"
     : (conds.length ? "" : "至少勾选一个条件");
 }
 
@@ -289,7 +289,7 @@ function render(results, conds) {
 
   var body = $("result-body");
   if (!passed.length) {
-    body.innerHTML = "<div class='empty">没有股票通过全部勾选条件</div>";
+    body.innerHTML = "<div class='empty'>没有股票通过全部勾选条件</div>";
   } else {
     var head = "<tr><th>代码</th><th>名称</th>" + COLUMNS.map(function (col) {
       return "<th" + (conds.indexOf(col.cond) >= 0 ? " class='on'" : "")
