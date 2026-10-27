@@ -58,6 +58,7 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
   .page-head h1{margin:0 0 6px;font-size:21px;font-weight:700;letter-spacing:-.02em}
   .page-head h1 .warn{color:var(--danger)}
   .page-head p{margin:0;color:var(--ink-soft);font-size:12px}
+  .page-sub-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 
   /* ---- 标的搜索（①卡标题行右侧） ---- */
   .sym-box{position:relative;flex:none}
@@ -175,7 +176,22 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
 
   <div class="page-head">
     <h1>分析历史数据计算低估区间，<span class="warn">避免追高导致收益少、回撤深、体验差</span></h1>
-    <p>三步看懂波段：① 看估值通道，判断现在贵不贵 → ② 设买卖区间 → ③ 用历史数据回放验证。</p>
+    <div class="page-sub-row">
+      <p>三步看懂波段：① 看估值通道，判断现在贵不贵 → ② 设买卖区间 → ③ 用历史数据回放验证。</p>
+      <span style="display:inline-flex;align-items:center;gap:10px">
+        <span>窗口
+          <span class="seg" id="seg-window">
+            <button data-v="6m" class="active">半年</button>
+            <button data-v="1y">1 年</button>
+            <button data-v="2y">2 年</button>
+          </span>
+        </span>
+        <span class="sym-box" id="sym-box">
+          <input id="sym" value="600519" autocomplete="off" spellcheck="false"
+                 placeholder="代码 / 名称 / 拼音" style="width:150px">
+        </span>
+      </span>
+    </div>
   </div>
 
   <!-- ① 看估值通道 -->
@@ -183,12 +199,7 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
     <div class="step-head">
       <span class="step-badge">1</span>
       <h2>看估值通道</h2>
-      <span class="hint" style="margin-left:auto">
-        <span class="sym-box" id="sym-box">
-          <input id="sym" value="600519" autocomplete="off" spellcheck="false"
-                 placeholder="代码 / 名称 / 拼音" style="width:150px">
-        </span>
-      </span>
+      <span class="hint" id="metric-hint">PE · 半年窗口 · 当前估值相对历史位置</span>
     </div>
     <div id="chart" class="chart-box"></div>
     <div class="kpis" id="kpis"></div>
@@ -298,6 +309,8 @@ seg("seg-source", (v)=>{
 });
 ["in-low","in-high"].forEach(id => $(id).addEventListener("input", renderLevels));
 
+seg("seg-window", (v)=>{ state.window = v; load(); });
+
 /* 联想没带来名称时按代码查目录补齐（目录不可用则拿不到，不猜测） */
 async function resolveSymName(){
   if(state.sym_name || !state.symbol) return;
@@ -405,8 +418,10 @@ async function load(){
   state.channel = r.channel; state.levels = r.levels;
   state.last_close = r.last_close; state.suggest = null;
   $("load-note").textContent = r.demo ? "（演示数据）"
-    : `已加载 ${r.symbol}`
-      + (bankNote ? "（银行 → 默认 PB）" : "");
+    : `已加载 ${r.symbol}${state.sym_name ? " · " + state.sym_name : ""}`;
+  const winText = { "6m": "半年", "1y": "1年", "2y": "2年" }[state.window] || state.window;
+  $("metric-hint").textContent = state.metric.toUpperCase() + " · " + winText
+    + "窗口 · 当前估值相对历史位置";
   drawChart(r); renderKpis(r); renderDist(r); renderLevels();
   await autoBacktest();
 }
