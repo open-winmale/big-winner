@@ -55,10 +55,22 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
 
   /* ---- 痛点共鸣块：第一屏最显著，先共鸣再讲功能 ---- */
   .pain{margin:16px 0 0;border:1px solid var(--line);border-radius:var(--radius);
-    padding:16px;background:var(--surface)}
-  .pain h2{margin:0 0 8px;font-size:15px;font-weight:700;letter-spacing:-.01em}
-  .pain-line{margin:6px 0 0;font-size:13.5px;line-height:1.75;color:var(--ink)}
-  .pain-line .brand{color:var(--brand)}
+    padding:20px;background:var(--surface)}
+  .pain h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .pain-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media (max-width:640px){.pain-grid{grid-template-columns:1fr}}
+  .pain-card{border-radius:10px;padding:12px 14px}
+  .pain-card .t{font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:8px}
+  .pain-card .t .no{font-size:18px;font-weight:800}
+  .pain-card .d{margin:4px 0 0;font-size:12.5px;line-height:1.7;color:var(--ink-soft)}
+  .pain-card.chase{background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.22)}
+  .pain-card.chase .t .no,.pain-card.chase .t{color:#dc2626}
+  .pain-card.flat{background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.22)}
+  .pain-card.flat .t .no,.pain-card.flat .t{color:#b45309}
+  .pain-action{margin:12px 0 0;border-left:3px solid var(--brand);
+    background:rgba(37,99,235,.06);border-radius:8px;padding:10px 12px;
+    font-size:13.5px;line-height:1.75}
+  .pain-action .brand{color:var(--brand)}
 
   /* ---- 免责横幅：#dc2626 自绘（语义红，勿用涨跌 token） ---- */
 
@@ -206,8 +218,17 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
 
   <section class="pain">
     <h2>波段操作要解决的两件事</h2>
-    <p class="pain-line">① <b>追高买在高位</b>——深回撤、体验差；② <b>长期死拿</b>——坐过山车、原地踏步。</p>
-    <p class="pain-line"><span class="brand"><b>波段的做法：用数据分析找买卖点</b></span>——估值通道判断贵贱位置，历史回放验证这套点位的实际效果，不靠感觉。</p>
+    <div class="pain-grid">
+      <div class="pain-card chase">
+        <div class="t"><span class="no">①</span>追高买在高位</div>
+        <p class="d">深回撤、体验差——收益可能还不如躺平。</p>
+      </div>
+      <div class="pain-card flat">
+        <div class="t"><span class="no">②</span>长期死拿</div>
+        <p class="d">坐一轮轮过山车——时间花了，账户原地踏步。</p>
+      </div>
+    </div>
+    <p class="pain-action"><b>波段的做法：用数据分析找买卖点</b>——<span class="brand">估值通道判断贵贱位置，历史回放验证这套点位的实际效果</span>，不靠感觉。</p>
   </section>
 
   <div class="banner">⚠️ <b>免责声明：</b>本工具输出<b>统计描述与历史回放</b>，不构成任何投资建议；
