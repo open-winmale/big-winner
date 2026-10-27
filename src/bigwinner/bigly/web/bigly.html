@@ -58,6 +58,23 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
   .page-head h1{margin:0 0 6px;font-size:21px;font-weight:700;letter-spacing:-.02em}
   .page-head h1 .warn{color:var(--danger)}
   .page-head p{margin:0;color:var(--ink-soft);font-size:12px}
+
+  /* ---- 标的搜索（①卡标题行右侧） ---- */
+  .sym-box{position:relative;flex:none}
+  .sym-box input{width:150px;padding:6px 9px;font-size:13px}
+  .sym-dropdown{position:absolute;top:100%;right:0;z-index:20;
+    margin-top:6px;background:var(--surface);border:1px solid var(--line-strong);
+    border-radius:8px;box-shadow:0 12px 32px -12px rgba(15,23,42,.22);
+    overflow:hidden;max-height:300px;overflow-y:auto;min-width:220px}
+  .sym-item{display:flex;align-items:baseline;gap:12px;
+    padding:9px 14px;cursor:pointer;font-size:14px}
+  .sym-item:hover,.sym-item.active{background:var(--brand-soft)}
+  .sym-code{font-variant-numeric:tabular-nums;color:var(--brand);
+    font-weight:600;min-width:56px;font-size:13.5px}
+  .sym-name{color:var(--ink)}
+  .sym-empty{padding:14px;color:var(--ink-soft);font-size:13px;text-align:center}
+  .sym-fresh{padding:7px 14px;border-top:1px solid var(--line);
+    color:var(--ink-soft);font-size:11.5px;background:var(--surface-2)}
   /* ---- 卡片 ---- */
   .card{background:var(--surface);border:1px solid var(--line);
     border-radius:var(--radius);padding:16px}
@@ -166,7 +183,12 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
     <div class="step-head">
       <span class="step-badge">1</span>
       <h2>看估值通道</h2>
-      <span class="hint">600519 贵州茅台 · PE · 半年窗口 · 当前估值相对历史位置</span>
+      <span class="hint" style="margin-left:auto">
+        <span class="sym-box" id="sym-box">
+          <input id="sym" value="600519" autocomplete="off" spellcheck="false"
+                 placeholder="代码 / 名称 / 拼音" style="width:150px">
+        </span>
+      </span>
     </div>
     <div id="chart" class="chart-box"></div>
     <div class="kpis" id="kpis"></div>
@@ -250,7 +272,8 @@ const pctText = (v, digits=1) => v == null ? "—" : (v * 100).toFixed(digits) +
 const pctileText = (v) => v == null ? "—" : (v * 100).toFixed(0) + "%";
 const zoneText = {belowLow:"低于低估线", low:"偏低", normal:"正常区间", high:"偏高", aboveHigh:"高于高估线"};
 let chart = null, state = {symbol:null, metric:"pe", window:"6m",
-  channel:null, levels:null, suggest:null, last_close:null};
+  channel:null, levels:null, suggest:null, last_close:null,
+  sym_name:null};
 
 function seg(id, cb){
   $(id).addEventListener("click", (e) => {
@@ -275,10 +298,107 @@ seg("seg-source", (v)=>{
 });
 ["in-low","in-high"].forEach(id => $(id).addEventListener("input", renderLevels));
 
+/* 联想没带来名称时按代码查目录补齐（目录不可用则拿不到，不猜测） */
+async function resolveSymName(){
+  if(state.sym_name || !state.symbol) return;
+  const code = state.symbol;
+  const mkt = /^hk\./i.test(code) || (/^\d{1,5}$/.test(code) && code.length !== 6) ? "hk" : "cn";
+  try{
+    const d = await (await fetch("/api/bigly/symbols?q=" + encodeURIComponent(code)
+                                + "&market=" + mkt)).json();
+    const hit = (d.results || []).find(
+      r => (r.code || "").replace(/\D/g, "") === code.replace(/\D/g, ""));
+    if(hit) state.sym_name = hit.name || null;
+  }catch(e){ /* 保持无名，不阻塞加载 */ }
+}
+
+/* ---- 标的搜索联想（finpipe 离线全市场代码目录）---- */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let symDebounce = null, symDrop = null, symResults = [];
+function closeSymDrop(){ if(symDrop){ symDrop.remove(); symDrop = null; } }
+function symPick(item){
+  $("sym").value = item.code;
+  state.sym_name = item.name || null;
+  if(state.sym_name && state.sym_name.includes("银行")) state.metric = "pb";
+  else state.metric = "pe";
+  closeSymDrop();
+  load();
+}
+async function symQuery(q){
+  try{
+    const d = await (await fetch("/api/bigly/symbols?q=" + encodeURIComponent(q))).json();
+    symResults = d.results || [];
+    closeSymDrop();
+    symDrop = document.createElement("div");
+    symDrop.className = "sym-dropdown";
+    $("sym-box").appendChild(symDrop);
+    if(!symResults.length){
+      symDrop.innerHTML = '<div class="sym-empty">无匹配；可直接回车输入 6 位代码</div>';
+      return;
+    }
+    symDrop.innerHTML = symResults.map((it, i) => `
+      <div class="sym-item${i === 0 ? " active" : ""}" data-i="${i}">
+        <span class="sym-code">${esc(it.code)}</span>
+        <span class="sym-name">${esc(it.name)}</span>
+      </div>`).join("")
+      + (d.as_of ? `<div class="sym-fresh">代码目录快照 ${esc(d.as_of)}</div>` : "");
+    symDrop.querySelectorAll(".sym-item").forEach((el) => {
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        symPick(symResults[Number(el.getAttribute("data-i"))]);
+      });
+    });
+  }catch(e){ /* 搜索失败静默 */ }
+}
+$("sym").addEventListener("input", () => {
+  state.sym_name = null;  // 手工输入视为换票
+  const q = $("sym").value.trim();
+  clearTimeout(symDebounce);
+  if(!q){ closeSymDrop(); return; }
+  symDebounce = setTimeout(() => symQuery(q), 200);
+});
+$("sym").addEventListener("keydown", (e) => {
+  if(!symDrop){
+    if(e.key === "Enter" && /^\d{6}$/.test($("sym").value.trim())){
+      e.preventDefault();
+      state.sym_name = null;
+      load();  // 直接输 6 位代码回车即加载
+    }
+    return;
+  }
+  const items = symDrop.querySelectorAll(".sym-item");
+  const active = symDrop.querySelector(".sym-item.active");
+  let idx = items.length ? Array.from(items).indexOf(active) : -1;
+  if(e.key === "ArrowDown" && items.length){
+    e.preventDefault();
+    if(active) active.classList.remove("active");
+    idx = (idx + 1) % items.length;
+    items[idx].classList.add("active");
+  } else if(e.key === "ArrowUp" && items.length){
+    e.preventDefault();
+    if(active) active.classList.remove("active");
+    idx = (idx - 1 + items.length) % items.length;
+    items[idx].classList.add("active");
+  } else if(e.key === "Enter"){
+    e.preventDefault();
+    const it = symResults[idx >= 0 ? idx : 0];
+    symPick(it || {code: $("sym").value.trim()});
+  } else if(e.key === "Escape"){
+    closeSymDrop();
+  }
+});
+document.addEventListener("click", (e) => {
+  if(symDrop && !$("sym-box").contains(e.target)) closeSymDrop();
+});
+
 async function load(){
   state.symbol = $("sym").value.trim();
   if(!state.symbol){ $("load-note").textContent = "请输入代码"; return; }
   $("load-note").textContent = "加载中…";
+  // 按名称切默认估值：银行 → PB（联想选票带名称；手输代码保持当前指标）
+  if(state.sym_name && state.sym_name.includes("银行")) state.metric = "pb";
+  else if(state.sym_name) state.metric = "pe";
   const r = await post("/api/bigly/channel", {symbol: state.symbol, metric: state.metric,
                                               window: state.window});
   if(r.error){ $("load-note").textContent = r.error; return; }
