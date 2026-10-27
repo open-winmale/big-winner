@@ -56,14 +56,11 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
   /* ---- 痛点共鸣块：第一屏最显著，先共鸣再讲功能 ---- */
   .pain{margin:16px 0 0;border:1px solid var(--line);border-radius:var(--radius);
     padding:16px;background:var(--surface)}
-  .pain h2{margin:0 0 10px;font-size:17px;font-weight:700;letter-spacing:-.01em}
-  .pain-item{display:flex;gap:10px;border-radius:10px;padding:10px 12px;
-    font-size:13.5px;line-height:1.75;margin-bottom:8px}
-  .pain-item.chase{background:var(--warn-soft);color:var(--warn)}
-  .pain-item.flat{background:var(--surface-2);color:var(--ink-soft)}
-  .pain-item b{font-weight:700}
-  .pain-action{font-size:13.5px;line-height:1.75;color:var(--ink)}
-  .pain-action .brand{color:var(--brand);font-weight:700}
+  .pain h2{margin:0 0 8px;font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .pain-line{margin:6px 0 0;font-size:13.5px;line-height:1.75;color:var(--ink)}
+  .pain-line .brand{color:var(--brand)}
+
+  /* ---- 免责横幅：#dc2626 自绘（语义红，勿用涨跌 token） ---- */
 
   /* ---- 免责横幅：#dc2626 自绘（语义红，勿用涨跌 token） ---- */
   .banner{background:rgba(220,38,38,.10);border:1px solid rgba(220,38,38,.35);
@@ -165,10 +162,15 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
   .duo .line-row{font-size:13px;line-height:1.8}
   .duo ul{margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--danger)}
 
-  /* ---- 页脚算法说明 ---- */
+  /* ---- 页脚算法说明：默认折叠 ---- */
   .foot{margin-top:24px;border:1px solid var(--line);border-radius:var(--radius);
     padding:16px;font-size:12px;line-height:1.9;color:var(--ink-soft)}
   .foot b{color:var(--ink)}
+  .foot summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);list-style:none}
+  .foot summary::-webkit-details-marker{display:none}
+  .foot summary::after{content:" ›";color:var(--ink-soft)}
+  .foot[open] summary::after{content:" ‹"}
+  .foot-body{margin-top:10px}
 
   /* ---- 代码搜索联想 ---- */
   .sym-box{position:relative;max-width:190px;flex:none}
@@ -204,10 +206,8 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
 
   <section class="pain">
     <h2>波段操作要解决的两件事</h2>
-    <div class="pain-item chase">① <span><b>追高买入的痛</b>——买在高位，回撤又深又久，收益可能还不如躺平，持股体验极差。</span></div>
-    <div class="pain-item flat">② <span><b>长期死拿的痛</b>——坐一轮轮过山车：涨上去又跌回原地，账户原地踏步。</span></div>
-    <p class="pain-action">波段的做法：<span class="brand">估值低位分批买、回到高位分批卖</span>。这套买卖点行不行，
-      <b>同一窗口的历史回放直接说话</b>——下方「波段 vs 长持」同台对比，跑不跑得赢，数据见分晓。</p>
+    <p class="pain-line">① <b>追高买在高位</b>——深回撤、体验差；② <b>长期死拿</b>——坐过山车、原地踏步。</p>
+    <p class="pain-line"><span class="brand"><b>波段的做法：用数据分析找买卖点</b></span>——估值通道判断贵贱位置，历史回放验证这套点位的实际效果，不靠感觉。</p>
   </section>
 
   <div class="banner">⚠️ <b>免责声明：</b>本工具输出<b>统计描述与历史回放</b>，不构成任何投资建议；
@@ -317,21 +317,23 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
     </section>
   </div>
 
-  <div class="foot">
-    <b>算法说明</b>：估值通道 = 均值 ± Nσ（σ 为窗口内总体标准差 ÷N，下轨截 0），与平台 web「估值通道」同源；
-    买卖点换算 = 现价 × 目标倍数 / 当前倍数（隐含口径内 EPS/BPS 恒定）。窗口 6 个月/1/2/3 年（上限 3 年），默认半年，进页自动加载。
-    <b>推荐区间</b> = 窗口内穷举候选买卖倍数组合，须满足四条约束：买点不高于均值（不高估）、
-    买入价距窗口最低收盘 ≤15%（距最低点不要太远）、亏损持仓日占窗口 ≤35%（亏损时间不要过长）、
-    完整进出 ≥2 次（成交次数不要太少）；在满足约束的组合中按多轮回放收益择优（同收益取进出更多者），
-    无组合满足时逐级放宽并如实标注，全程无完整进出则回退通道轨。
-    <b>回放规则</b>：日 low≤买点触发买入（成交 min(open,买点)）；持仓日 high≥卖点止盈（max(open,卖点)）、
-    low≤止损止损（min(open,止损)）；同日双触发按保守先止损；T+1 买入当日不卖；
-    止盈/止损出场后资金回笼，卖出次日可再次买入，回放窗口内全部进出；
-    多轮收益按各轮复利（空仓期收益 0，不含现金利息）。
-    <b>简化假设</b>：不含涨跌停与成交量约束；qfq 前复权口径已消除除权跳空。
-    <br><b>免责声明</b>：本工具全部输出为统计描述与历史回放，不构成任何投资建议；
-    买卖点由你自己设定与负责；历史表现不代表未来；数据以上市公司公告与平台数据源为准。
-  </div>
+  <details class="foot">
+    <summary>算法与免责说明</summary>
+    <div class="foot-body">
+      <b>算法说明</b>：估值通道 = 均值 ± Nσ（σ 为窗口内总体标准差 ÷N，下轨截 0），与平台 web「估值通道」同源；
+      买卖点换算 = 现价 × 目标倍数 / 当前倍数（隐含口径内 EPS/BPS 恒定）。窗口 6 个月/1/2/3 年（上限 3 年），默认半年，进页自动加载。
+      <b>推荐区间</b> = 窗口内穷举候选买卖倍数组合，须满足四条约束：买点不高于均值（不高估）、
+      买入价距窗口最低收盘 ≤15%（距最低点不要太远）、亏损持仓日占窗口 ≤35%（亏损时间不要过长）、
+      完整进出 ≥2 次（成交次数不要太少）；在满足约束的组合中按多轮回放收益择优（同收益取进出更多者），
+      无组合满足时逐级放宽并如实标注，全程无完整进出则回退通道轨。
+      <b>回放规则</b>：日 low≤买点触发买入（成交 min(open,买点)）；持仓日 high≥卖点止盈（max(open,卖点)）、
+      low≤止损止损（min(open,止损)）；同日双触发按保守先止损；T+1 买入当日不卖；
+      止盈/止损出场后资金回笼，卖出次日可再次买入，回放窗口内全部进出；
+      多轮收益按各轮复利（空仓期收益 0，不含现金利息）。
+      <b>简化假设</b>：不含涨跌停与成交量约束；qfq 前复权口径已消除除权跳空；
+      数据以上市公司公告与平台数据源为准。
+    </div>
+  </details>
 </main>
 
 <script>
