@@ -179,6 +179,12 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
     <div class="page-sub-row">
       <p>三步看懂波段：① 看估值通道，判断现在贵不贵 → ② 设买卖区间 → ③ 用历史数据回放验证。</p>
       <span style="display:inline-flex;align-items:center;gap:10px">
+        <span>指标
+          <span class="seg" id="seg-metric">
+            <button data-v="pe" class="active">PE</button>
+            <button data-v="pb">PB</button>
+          </span>
+        </span>
         <span>窗口
           <span class="seg" id="seg-window">
             <button data-v="6m" class="active">半年</button>
@@ -283,7 +289,7 @@ const pctText = (v, digits=1) => v == null ? "—" : (v * 100).toFixed(digits) +
 const pctileText = (v) => v == null ? "—" : (v * 100).toFixed(0) + "%";
 const zoneText = {belowLow:"低于低估线", low:"偏低", normal:"正常区间", high:"偏高", aboveHigh:"高于高估线"};
 let chart = null, state = {symbol:null, metric:"pe", window:"6m",
-  channel:null, levels:null, suggest:null, last_close:null,
+  channel:null, levels:null, suggest:null, last_close:null, metricOverride:false,
   sym_name:null};
 
 function seg(id, cb){
@@ -309,6 +315,7 @@ seg("seg-source", (v)=>{
 });
 ["in-low","in-high"].forEach(id => $(id).addEventListener("input", renderLevels));
 
+seg("seg-metric", (v)=>{ state.metric = v; state.metricOverride = true; load(); });
 seg("seg-window", (v)=>{ state.window = v; load(); });
 
 /* 联想没带来名称时按代码查目录补齐（目录不可用则拿不到，不猜测） */
@@ -409,9 +416,11 @@ async function load(){
   state.symbol = $("sym").value.trim();
   if(!state.symbol){ $("load-note").textContent = "请输入代码"; return; }
   $("load-note").textContent = "加载中…";
-  // 按名称切默认估值：银行 → PB（联想选票带名称；手输代码保持当前指标）
-  if(state.sym_name && state.sym_name.includes("银行")) state.metric = "pb";
-  else if(state.sym_name) state.metric = "pe";
+  // 按名称切默认估值：银行 → PB；手动选过指标则尊重手动（换新票重置为自动）
+  if(!state.metricOverride){
+    if(state.sym_name && state.sym_name.includes("银行")) state.metric = "pb";
+    else if(state.sym_name) state.metric = "pe";
+  }
   const r = await post("/api/bigly/channel", {symbol: state.symbol, metric: state.metric,
                                               window: state.window});
   if(r.error){ $("load-note").textContent = r.error; return; }
