@@ -53,6 +53,18 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
   /* ---- 页宽：对齐 band-guide 的 max-w-3xl ---- */
   .wrap{max-width:816px;margin:0 auto;padding:0 24px 72px}
 
+  /* ---- 痛点共鸣块：第一屏最显著，先共鸣再讲功能 ---- */
+  .pain{margin:16px 0 0;border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;background:var(--surface)}
+  .pain h2{margin:0 0 10px;font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .pain-item{display:flex;gap:10px;border-radius:10px;padding:10px 12px;
+    font-size:13.5px;line-height:1.75;margin-bottom:8px}
+  .pain-item.chase{background:var(--warn-soft);color:var(--warn)}
+  .pain-item.flat{background:var(--surface-2);color:var(--ink-soft)}
+  .pain-item b{font-weight:700}
+  .pain-action{font-size:13.5px;line-height:1.75;color:var(--ink)}
+  .pain-action .brand{color:var(--brand);font-weight:700}
+
   /* ---- 免责横幅：#dc2626 自绘（语义红，勿用涨跌 token） ---- */
   .banner{background:rgba(220,38,38,.10);border:1px solid rgba(220,38,38,.35);
     color:#dc2626;padding:12px 16px;border-radius:10px;margin:16px 0 0;
@@ -189,6 +201,14 @@ window.echarts || document.write('<script src="https://unpkg.com/echarts@5.5.0/d
 </header>
 
 <main class="wrap">
+
+  <section class="pain">
+    <h2>波段操作要解决的两件事</h2>
+    <div class="pain-item chase">① <span><b>追高买入的痛</b>——买在高位，回撤又深又久，收益可能还不如躺平，持股体验极差。</span></div>
+    <div class="pain-item flat">② <span><b>长期死拿的痛</b>——坐一轮轮过山车：涨上去又跌回原地，账户原地踏步。</span></div>
+    <p class="pain-action">波段的做法：<span class="brand">估值低位分批买、回到高位分批卖</span>。这套买卖点行不行，
+      <b>同一窗口的历史回放直接说话</b>——下方「波段 vs 长持」同台对比，跑不跑得赢，数据见分晓。</p>
+  </section>
 
   <div class="banner">⚠️ <b>免责声明：</b>本工具输出<b>统计描述与历史回放</b>，不构成任何投资建议；
     买卖点由你自己设定与负责。历史表现不代表未来。</div>
