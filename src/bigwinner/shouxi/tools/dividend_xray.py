@@ -4,7 +4,7 @@
 1. **单位纪律**：内部一律使用 SDK 基础单位（比率=小数、金额=元、股数=股），
    只在渲染层转成百分比，杜绝 0.0396 → 0.04% 这类量级错误。
 2. **取数可注入**：所有数据经 `Fetcher` 协议获取，测试用 `FakeFetcher`，
-   生产用 `FinpipeFetcher`。计算层不认识 finpipe。
+   生产用 `WmshareFetcher`。计算层不认识 wmshare。
 3. **缺失显式化**：任何字段取不到都是 `None`，并记入 `Row.missing`，
    绝不静默填 0 或猜值。
 """
@@ -38,7 +38,7 @@ MAX_POSITIONS = 30
 
 
 class Fetcher(Protocol):
-    """取数协议。实现方负责把 finpipe 的原始响应归一成本文件约定的形状。"""
+    """取数协议。实现方负责把 wmshare 的原始响应归一成本文件约定的形状。"""
 
     def prices(self, codes: Sequence[str]) -> dict[str, float | None]:
         """一次拿全部现价（元）。缺失的代码对应 None。"""
@@ -103,7 +103,7 @@ class Position:
         """计算层/取数层用的代码。
 
         A 股裸 6 位；港股 hk.00700（5 位补零）；美股 us.ADBE。
-        FinpipeFetcher 会按前缀路由，并对港股再剥成裸码 + market=hk。
+        WmshareFetcher 会按前缀路由，并对港股再剥成裸码 + market=hk。
         """
         market = self.inferred_market()
         code = str(self.code).strip()

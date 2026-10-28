@@ -1,6 +1,6 @@
-"""取数适配器：把 finpipe 的原始响应归一成 `dividend_xray.Fetcher` 协议。
+"""取数适配器：把 wmshare 的原始响应归一成 `dividend_xray.Fetcher` 协议。
 
-生产用 `FinpipeFetcher`（外面可套 `CachedFetcher` 省额度），测试用 `FakeFetcher`。
+生产用 `WmshareFetcher`（外面可套 `CachedFetcher` 省额度），测试用 `FakeFetcher`。
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from bigwinner.shouxi.tools.dividend_xray import Fetcher
 
 
 def has_own_credentials() -> bool:
-    """本机是否配置了自己的 finpipe 凭证（环境变量或 ~/.finpipe/credentials.env）。
+    """本机是否配置了自己的 wmshare 凭证（环境变量或 ~/.wmshare/credentials.env）。
 
     只认显式配置——SDK 内置的共享体验 AppID 不算数：工具已下线体验 Key
     路径，无自有凭证时服务应进演示模式而不是悄悄蹭共享池。
@@ -19,11 +19,11 @@ def has_own_credentials() -> bool:
     import os
     from pathlib import Path
 
-    cid = os.environ.get("FINPIPE_CLIENT_ID") or os.environ.get("OPEN_PLATFORM_CLIENT_ID")
-    if cid and (os.environ.get("FINPIPE_CLIENT_SECRET")
+    cid = os.environ.get("WMSHARE_CLIENT_ID") or os.environ.get("OPEN_PLATFORM_CLIENT_ID")
+    if cid and (os.environ.get("WMSHARE_CLIENT_SECRET")
                 or os.environ.get("OPEN_PLATFORM_CLIENT_SECRET")):
         return True
-    return Path.home().joinpath(".finpipe", "credentials.env").is_file()
+    return Path.home().joinpath(".wmshare", "credentials.env").is_file()
 
 
 def _digits(code: str) -> str:
@@ -87,8 +87,8 @@ def _snapshot_key(key: Any, market: str) -> str:
     return _digits(str(key))
 
 
-class FinpipeFetcher:
-    """真实取数。finpipe 延迟导入，未安装时给出可操作提示。
+class WmshareFetcher:
+    """真实取数。wmshare 延迟导入，未安装时给出可操作提示。
 
     双市场：A 股走默认 client（market=cn）；港股必须走 market="hk" 的
     client + 5 位裸码。原因（实测）：分红库按 ``bonus.PROPS.<sym>`` 拼 key，
@@ -105,13 +105,13 @@ class FinpipeFetcher:
                  hk_client: Any | None = None) -> None:
         if client is None:
             try:
-                import finpipe  # noqa: PLC0415 - 延迟导入，未安装也能启动服务
+                import wmshare  # noqa: PLC0415 - 延迟导入，未安装也能启动服务
             except ImportError as exc:  # pragma: no cover
                 raise RuntimeError(
-                    "未安装 finpipe。请先：git clone https://github.com/open-winmale/finpipe，"
-                    "再 pip install -e ./finpipe（非商业许可）。"
+                    "未安装 wmshare。请先：git clone https://github.com/open-winmale/wmshare，"
+                    "再 pip install -e ./wmshare（非商业许可）。"
                 ) from exc
-            client = finpipe.Client.from_env()
+            client = wmshare.Client.from_env()
         self.cli = client
         self._hk_client = hk_client
         self._hk_tried = hk_client is not None
@@ -123,8 +123,8 @@ class FinpipeFetcher:
         if self._hk_client is None and not self._hk_tried:
             self._hk_tried = True
             try:
-                import finpipe  # noqa: PLC0415
-                self._hk_client = finpipe.Client.from_env(market="hk")
+                import wmshare  # noqa: PLC0415
+                self._hk_client = wmshare.Client.from_env(market="hk")
             except Exception as exc:  # noqa: BLE001 - 港股通道失败不拖垮 A 股
                 self._hk_error = f"{type(exc).__name__}: {exc}"
         return self._hk_client
@@ -139,9 +139,9 @@ class FinpipeFetcher:
 
     def rekey(self, client_id: str, client_secret: str) -> None:
         """热切换凭证：用页面保存的 Key 重建 CN/HK 客户端（无需重启服务）。"""
-        import finpipe  # noqa: PLC0415
-        self.cli = finpipe.Client(client_id=client_id, client_secret=client_secret)
-        self._hk_client = finpipe.Client(
+        import wmshare  # noqa: PLC0415
+        self.cli = wmshare.Client(client_id=client_id, client_secret=client_secret)
+        self._hk_client = wmshare.Client(
             client_id=client_id, client_secret=client_secret, market="hk")
         self._hk_tried = True
 

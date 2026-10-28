@@ -1,6 +1,6 @@
-"""波段数据层：finpipe 取数与离线样例（Fetcher 可替换）。
+"""波段数据层：wmshare 取数与离线样例（Fetcher 可替换）。
 
-真实模式经 finpipe SDK 取数（估值历史统计 / qfq 日 K / 现价）；3 年窗口约
+真实模式经 wmshare SDK 取数（估值历史统计 / qfq 日 K / 现价）；3 年窗口约
 730 个交易日，故客户端 max_limit 放宽到 800。演示模式（--demo）用确定性
 罐头数据，无凭证、不联网即可看效果。
 """
@@ -16,16 +16,16 @@ WINDOW_BARS = {"6m": 130, "1y": 260, "2y": 510, "3y": 760}
 _WINDOW_POINTS = {"6m": 122, "1y": 244, "2y": 488, "3y": 730}
 
 
-class FinpipeBiglyData:
-    """经 finpipe SDK 取数的真实数据源。"""
+class WmshareBiglyData:
+    """经 wmshare SDK 取数的真实数据源。"""
 
     demo = False
 
     def __init__(self, client: Any | None = None):
-        if client is None:  # 注入桩客户端时零 finpipe 依赖（离线测试可用）
-            import finpipe
+        if client is None:  # 注入桩客户端时零 wmshare 依赖（离线测试可用）
+            import wmshare
 
-            client = finpipe.Client.from_env()
+            client = wmshare.Client.from_env()
         self._cli = client
         try:
             self._cli.max_limit = max(self._cli.max_limit or 0, 800)

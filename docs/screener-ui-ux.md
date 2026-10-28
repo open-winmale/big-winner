@@ -69,7 +69,7 @@
   limit 1–200 钳制；未知策略 400。
 - 通道：`wm-screen-index` conditions（INDICATOR 字段/操作符/阈值 + fields 投影 +
   top_n + market），实测 2026-10-26：`$PE_TTM_LAST` ✓ `$PB_TTM_LAST` ✓
-  股息率 cn/hk ✓；finpipe 原生 index 积木 500（spec 变更）→ roadmap。
+  股息率 cn/hk ✓；wmshare 原生 index 积木 500（spec 变更）→ roadmap。
 
 ## 6. 视觉（base.css tokens）
 
@@ -81,4 +81,4 @@
 ## 7. 后续扩展（非本期）
 
 「在平台打开」deeplink（通道响应自带 stock-picking 链接）· 趋势/动量全市场策略
-（待 finpipe 二期 index_query）· 结果快照历史 · 更多条件字段（派息率分位等）
+（待 wmshare 二期 index_query）· 结果快照历史 · 更多条件字段（派息率分位等）

@@ -11,7 +11,7 @@
 - 未填买入日：按 20% 保守估算，并标记 estimated。
 - 买入日之前的除权记录不会计入（那时还没持股）。
 
-数据来源：finpipe `bonus.query_list`（ex_date/pay_date/dps 真实披露值）。
+数据来源：wmshare `bonus.query_list`（ex_date/pay_date/dps 真实披露值）。
 用户只输入：代码 + 股数 + （可选）买入日期/税率。不做任何猜测填充。
 """
 from __future__ import annotations
@@ -159,7 +159,7 @@ def build_ledger(
     """按年度汇总每票的"应收股息"。
 
     positions: [{code, shares, market?, buy_date?, tax_rate?, name?}]
-    rows_by_code: finpipe dividend.history 的原始行（已归一 sas 别名亦可）
+    rows_by_code: wmshare dividend.history 的原始行（已归一 sas 别名亦可）
     year: 只看该除权年份；None = 全部历史
     tax: {mode: auto|flat|by_year, flat_rate, year_rates: {年份: 税率}}
     fx: {币种: 兑 CNY 汇率}；CNY 恒为 1

@@ -141,25 +141,25 @@ def test_appinfo_demo_reports_snapshot(base_url):
 
 
 def test_has_own_credentials(monkeypatch, tmp_path):
-    """只认显式配置：环境变量或 ~/.finpipe/credentials.env；SDK 体验凭证不算。"""
+    """只认显式配置：环境变量或 ~/.wmshare/credentials.env；SDK 体验凭证不算。"""
     from bigwinner.common.fetchers import has_own_credentials
 
-    monkeypatch.delenv("FINPIPE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("WMSHARE_CLIENT_ID", raising=False)
     monkeypatch.delenv("OPEN_PLATFORM_CLIENT_ID", raising=False)
-    monkeypatch.delenv("FINPIPE_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("WMSHARE_CLIENT_SECRET", raising=False)
     monkeypatch.delenv("OPEN_PLATFORM_CLIENT_SECRET", raising=False)
     monkeypatch.setenv("HOME", str(tmp_path))
     assert has_own_credentials() is False
 
-    monkeypatch.setenv("FINPIPE_CLIENT_ID", "mine")
-    monkeypatch.setenv("FINPIPE_CLIENT_SECRET", "mine-secret")
+    monkeypatch.setenv("WMSHARE_CLIENT_ID", "mine")
+    monkeypatch.setenv("WMSHARE_CLIENT_SECRET", "mine-secret")
     assert has_own_credentials() is True
 
-    monkeypatch.delenv("FINPIPE_CLIENT_ID", raising=False)
-    monkeypatch.delenv("FINPIPE_CLIENT_SECRET", raising=False)
-    cred = tmp_path / ".finpipe" / "credentials.env"
+    monkeypatch.delenv("WMSHARE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("WMSHARE_CLIENT_SECRET", raising=False)
+    cred = tmp_path / ".wmshare" / "credentials.env"
     cred.parent.mkdir()
-    cred.write_text("FINPIPE_CLIENT_ID=x\nFINPIPE_CLIENT_SECRET=y\n")
+    cred.write_text("WMSHARE_CLIENT_ID=x\nWMSHARE_CLIENT_SECRET=y\n")
     assert has_own_credentials() is True
 
 
@@ -167,8 +167,8 @@ def test_main_auto_demo_without_credentials(monkeypatch, capsys, tmp_path):
     """体验 Key 下线后：无自有凭证 + 无 --demo → main 自动进演示模式并在控制台注明。"""
     from bigwinner.common import fetchers
 
-    for var in ("FINPIPE_CLIENT_ID", "OPEN_PLATFORM_CLIENT_ID",
-                "FINPIPE_CLIENT_SECRET", "OPEN_PLATFORM_CLIENT_SECRET"):
+    for var in ("WMSHARE_CLIENT_ID", "OPEN_PLATFORM_CLIENT_ID",
+                "WMSHARE_CLIENT_SECRET", "OPEN_PLATFORM_CLIENT_SECRET"):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
@@ -192,8 +192,8 @@ def test_main_auto_demo_without_credentials(monkeypatch, capsys, tmp_path):
 
 def test_main_real_mode_with_credentials(monkeypatch, capsys, tmp_path):
     """有自有凭证时不自动降级：照常进真实取数模式。"""
-    monkeypatch.setenv("FINPIPE_CLIENT_ID", "mine")
-    monkeypatch.setenv("FINPIPE_CLIENT_SECRET", "mine-secret")
+    monkeypatch.setenv("WMSHARE_CLIENT_ID", "mine")
+    monkeypatch.setenv("WMSHARE_CLIENT_SECRET", "mine-secret")
 
     class FakeServer:
         def __init__(self, addr, handler):

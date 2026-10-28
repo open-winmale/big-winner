@@ -5,7 +5,7 @@
 - 当前位置用 z=(current−avg)/σ 描述，分五档：belowLow / low / normal / high / aboveHigh。
 - 覆盖率 = 窗口内落在 ±2σ 通道内的交易日占比。
 
-输入为 finpipe `cli.valuation.hist_stats` 的输出：
+输入为 wmshare `cli.valuation.hist_stats` 的输出：
 ``{avg, current, median, min, max, pct, count, series: [[unix秒, 值], ...]}``。
 """
 from __future__ import annotations

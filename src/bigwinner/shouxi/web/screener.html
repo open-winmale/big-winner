@@ -126,7 +126,7 @@
   </section>
 
   <div class="footer">
-    <div>数据来自平台选股引擎与 finpipe；历史选股结果不代表未来；最终以上市公司公告为准。</div>
+    <div>数据来自平台选股引擎与 wmshare；历史选股结果不代表未来；最终以上市公司公告为准。</div>
   </div>
 </main>
 
@@ -375,7 +375,7 @@ fetch("/api/appinfo").then(function (r) { return r.json(); }).then(function (inf
   if (info.demo) {
     $("demo-badge").textContent = "演示数据";
   } else {
-    $("key-badge").textContent = "finpipe 实时数据";
+    $("key-badge").textContent = "wmshare 实时数据";
   }
 }).catch(function () { /* 就绪前忽略 */ });
 </script>

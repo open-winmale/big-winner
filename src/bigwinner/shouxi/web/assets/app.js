@@ -1434,7 +1434,7 @@
     let status = {};
     try { status = await api('key-status'); } catch (_) { /* 忽略 */ }
     aux(`
-      <div class="card-head"><h2>finpipe 数据 Key</h2>
+      <div class="card-head"><h2>wmshare 数据 Key</h2>
         <span class="hint">${status.custom
           ? '✓ 正在使用你自己的 Key（额度独立）'
           : '当前没有检测到自己的 Key。填入并验证通过后立即生效'}</span></div>
@@ -1442,7 +1442,7 @@
         到 <a href="https://open.winmale.com" target="_blank" rel="noopener">open.winmale.com</a>
         微信扫码登录 →「我的」→「开放平台」→「我的应用」→ 复制 client_id 与 api-key。
         保存后<strong>立即验证并热切换</strong>，无需重启（Key 只存本机
-        ~/.finpipe/credentials.env，权限 600，不会回显）。</p>
+        ~/.wmshare/credentials.env，权限 600，不会回显）。</p>
       <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:8px">
         <input id="key-id" placeholder="client_id" autocomplete="off" spellcheck="false">
         <input id="key-secret" type="password" placeholder="api-key（client_secret）" autocomplete="off">

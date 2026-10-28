@@ -4,7 +4,7 @@
 `python -m bigwinner.bigly` :8788，二者互不影响）。
 
 启动：
-    PYTHONPATH=src python -m bigwinner.server              # 真实取数（需 finpipe）
+    PYTHONPATH=src python -m bigwinner.server              # 真实取数（需 wmshare）
     PYTHONPATH=src python -m bigwinner.server --demo       # 内置样例数据，无需凭证
     PYTHONPATH=src python -m bigwinner.server --port 8787
 
@@ -70,7 +70,7 @@ TOOLS: dict[str, dict[str, str]] = {
 
 DISCLAIMER = (
     "本工具仅做持仓数据的统计聚合，不构成任何投资建议；"
-    "数据来自 finpipe，最终以上市公司公告为准；历史分红不代表未来。"
+    "数据来自 wmshare，最终以上市公司公告为准；历史分红不代表未来。"
 )
 
 
@@ -82,7 +82,7 @@ class ToolError(Exception):
 
 
 class Runtime:
-    """惰性持有取数实例，避免未安装 finpipe 时服务起不来。"""
+    """惰性持有取数实例，避免未安装 wmshare 时服务起不来。"""
 
     def __init__(self, demo: bool = False) -> None:
         self.demo = demo
@@ -93,26 +93,26 @@ class Runtime:
             if self.demo:
                 self._fetcher = fetchers.FakeFetcher(**_demo_data())
             else:
-                self._fetcher = fetchers.CachedFetcher(fetchers.FinpipeFetcher())
+                self._fetcher = fetchers.CachedFetcher(fetchers.WmshareFetcher())
         return self._fetcher
 
     def rekey(self, client_id: str, client_secret: str) -> bool:
         """热切换到用户自己的 Key。成功返回 True，凭证无效返回 False。"""
         if self.demo:
             return False  # demo 模式不接真实 Key
-        import finpipe  # noqa: PLC0415
+        import wmshare  # noqa: PLC0415
         try:
-            probe = finpipe.Client(client_id=client_id, client_secret=client_secret)
+            probe = wmshare.Client(client_id=client_id, client_secret=client_secret)
             probe.call("kline.query_bars", sym="600036", limit=1)  # 真实验证
         except Exception:  # noqa: BLE001 - 凭证错/网络错都不切换
             return False
         inner = getattr(self._fetcher, "inner", None)
-        if inner is not None:  # CachedFetcher 包着 FinpipeFetcher
+        if inner is not None:  # CachedFetcher 包着 WmshareFetcher
             inner.rekey(client_id, client_secret)
             self._fetcher._store.clear()  # 旧 Key 的缓存全部作废
         else:
             self._fetcher = fetchers.CachedFetcher(
-                fetchers.FinpipeFetcher(client=probe))
+                fetchers.WmshareFetcher(client=probe))
         return True
 
 
@@ -126,8 +126,8 @@ _BIGLY_DATA: Any = None
 
 
 def bigly_data() -> Any:
-    """波段的取数实例，首次请求时才构造（demo→罐头数据，真实→finpipe SDK），
-    未安装 finpipe 不影响服务启动。"""
+    """波段的取数实例，首次请求时才构造（demo→罐头数据，真实→wmshare SDK），
+    未安装 wmshare 不影响服务启动。"""
     global _BIGLY_DATA
     if _BIGLY_DATA is None:
         _BIGLY_DATA = bigly_srv.build_data(RUNTIME.demo)
@@ -138,7 +138,7 @@ _SCREENER_DATA: Any = None
 
 
 def screener_data() -> Any:
-    """筛选工具的取数实例（demo→确定性罐头，真实→finpipe，仅 A 股口径）。"""
+    """筛选工具的取数实例（demo→确定性罐头，真实→wmshare，仅 A 股口径）。"""
     global _SCREENER_DATA
     if _SCREENER_DATA is None:
         if RUNTIME.demo:
@@ -168,7 +168,7 @@ def _demo_data() -> dict[str, Any]:
     """demo 模式数据：真实数据的静态快照（非实时）。
 
     价格 / 股息率 / 分红史都是生成当日真实接口返回——演示要经得起看，
-    只是时间冻结在快照日。配置 finpipe Key 即变实时：演示模式下
+    只是时间冻结在快照日。配置 wmshare Key 即变实时：演示模式下
     「验证并换 Key」通过后会直接热切换，无需重启（见 key_save）。
     快照文件缺失时退回内置最小样例，保证 --demo 永远能起。
     """
@@ -778,27 +778,27 @@ def run_screener(payload: dict[str, Any]) -> dict[str, Any]:
 
 def key_status(_: dict[str, Any]) -> dict[str, Any]:
     """当前凭证状态：是否用着自己的 Key（只回布尔与来源，绝不回 Key 本体）。"""
-    custom = bool(os.environ.get("FINPIPE_CLIENT_ID")) or \
-        Path.home().joinpath(".finpipe", "credentials.env").exists()
+    custom = bool(os.environ.get("WMSHARE_CLIENT_ID")) or \
+        Path.home().joinpath(".wmshare", "credentials.env").exists()
     return {"custom": custom, "demo": RUNTIME.demo}
 
 
 def _write_credentials(cid: str, sec: str) -> None:
-    """Key 落盘 ~/.finpipe/credentials.env（权限 600，不回显）。"""
-    cred = Path.home() / ".finpipe" / "credentials.env"
+    """Key 落盘 ~/.wmshare/credentials.env（权限 600，不回显）。"""
+    cred = Path.home() / ".wmshare" / "credentials.env"
     cred.parent.mkdir(parents=True, exist_ok=True)
     cred.write_text(
-        f"FINPIPE_CLIENT_ID={cid}\nFINPIPE_CLIENT_SECRET={sec}\n",
+        f"WMSHARE_CLIENT_ID={cid}\nWMSHARE_CLIENT_SECRET={sec}\n",
         encoding="utf-8")
     cred.chmod(0o600)
 
 
 def key_save(payload: dict[str, Any]) -> dict[str, Any]:
-    """页面直接保存 Key：写 ~/.finpipe/credentials.env + 验证。
+    """页面直接保存 Key：写 ~/.wmshare/credentials.env + 验证。
 
     真实模式：验证通过立即热切换，缓存作废。
-    演示模式：验证通过后直接热切换为实时取数（finpipe 可用即可），无需重启；
-    未安装 finpipe 时只落盘并如实提示。换 Key 的入口任何模式下都可用。
+    演示模式：验证通过后直接热切换为实时取数（wmshare 可用即可），无需重启；
+    未安装 wmshare 时只落盘并如实提示。换 Key 的入口任何模式下都可用。
     安全：响应不回显 Key；写文件权限 600；验证失败不落地。
     """
     global _BIGLY_DATA, _SCREENER_DATA
@@ -809,14 +809,14 @@ def key_save(payload: dict[str, Any]) -> dict[str, Any]:
 
     if RUNTIME.demo:
         try:
-            import finpipe  # noqa: PLC0415
+            import wmshare  # noqa: PLC0415
         except ImportError:
             _write_credentials(cid, sec)
-            return {"ok": True, "message": "Key 已保存（本机未安装 finpipe，"
-                    "跳过在线验证）~/.finpipe/credentials.env。安装 finpipe 后"
+            return {"ok": True, "message": "Key 已保存（本机未安装 wmshare，"
+                    "跳过在线验证）~/.wmshare/credentials.env。安装 wmshare 后"
                     "重启真实模式即生效。"}
         try:
-            probe = finpipe.Client(client_id=cid, client_secret=sec)
+            probe = wmshare.Client(client_id=cid, client_secret=sec)
             probe.call("kline.query_bars", sym="600036", limit=1)  # 真实验证
         except Exception:  # noqa: BLE001 - 凭证错/网络错都不落地
             raise ToolError("Key 验证失败：请检查是否复制完整（client_id + "
@@ -824,7 +824,7 @@ def key_save(payload: dict[str, Any]) -> dict[str, Any]:
         _write_credentials(cid, sec)
         # 热切换：复用刚验证过的 client 转实时取数，波段/筛选取数实例也重建
         RUNTIME._fetcher = fetchers.CachedFetcher(
-            fetchers.FinpipeFetcher(client=probe))
+            fetchers.WmshareFetcher(client=probe))
         RUNTIME.demo = False
         _BIGLY_DATA = None
         _SCREENER_DATA = None
@@ -836,7 +836,7 @@ def key_save(payload: dict[str, Any]) -> dict[str, Any]:
         raise ToolError("Key 验证失败：请检查是否复制完整（client_id + api-key）。"
                         "旧 Key 未受影响，工具仍用原凭证。")
     _write_credentials(cid, sec)
-    return {"ok": True, "message": "Key 已验证并保存（~/.finpipe/credentials.env），"
+    return {"ok": True, "message": "Key 已验证并保存（~/.wmshare/credentials.env），"
                                    "额度从此独立。缓存已清空，立即生效。"}
 
 
@@ -1060,7 +1060,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="收息佬（big-winner）单端口 Web 服务")
     parser.add_argument("--port", type=int, default=8787)
     parser.add_argument("--demo", action="store_true",
-                        help="使用内置样例数据，无需 finpipe 凭证")
+                        help="使用内置样例数据，无需 wmshare 凭证")
     args = parser.parse_args(argv)
     RUNTIME.demo = args.demo
     auto_demo = False
@@ -1071,7 +1071,7 @@ def main(argv: list[str] | None = None) -> int:
 
     host = "127.0.0.1"
     print(f"\n  收息佬（big-winner）  →  http://{host}:{args.port}")
-    print(f"  模式：{'demo（真实数据快照）' if RUNTIME.demo else '真实取数（finpipe）'}")
+    print(f"  模式：{'demo（真实数据快照）' if RUNTIME.demo else '真实取数（wmshare）'}")
     if auto_demo:
         as_of = (_demo_snapshot() or {}).get("as_of")
         print(f"  未检测到自己的 Key，已进入演示模式（历史快照"

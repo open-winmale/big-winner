@@ -1,4 +1,4 @@
-"""取数层双市场路由测试：不需要 finpipe、不联网。
+"""取数层双市场路由测试：不需要 wmshare、不联网。
 
 核心断言：港股必须走 market="hk" 的 client + 5 位裸码；A 股走默认 client。
 这是线上"港股只有价格、没有分红/EPS"的根因，不能回归。
@@ -11,7 +11,7 @@ import pytest
 
 from bigwinner.common.fetchers import (
     FakeFetcher,
-    FinpipeFetcher,
+    WmshareFetcher,
     _market,
     _query_code,
     positions_from_payload,
@@ -110,11 +110,11 @@ def test_market_and_query_code_normalization():
     assert _query_code("us.ADBE") == "ADBE"
 
 
-def test_finpipe_fetcher_routes_hk_and_cn_to_separate_clients():
+def test_wmshare_fetcher_routes_hk_and_cn_to_separate_clients():
     calls: list = []
     cn = FakeClient("cn", calls)
     hk = FakeClient("hk", calls)
-    fetcher = FinpipeFetcher(client=cn, hk_client=hk)
+    fetcher = WmshareFetcher(client=cn, hk_client=hk)
 
     prices = fetcher.prices(["600519", "hk.00700"])
     assert prices == {"600519": 10.0, "hk.00700": 382.4}
@@ -145,7 +145,7 @@ def test_finpipe_fetcher_routes_hk_and_cn_to_separate_clients():
 
 def test_snapshot_response_key_with_dotted_prefix_still_maps():
     calls: list = []
-    fetcher = FinpipeFetcher(client=FakeClient("cn", calls),
+    fetcher = WmshareFetcher(client=FakeClient("cn", calls),
                              hk_client=FakeClient("hk", calls))
     snap = fetcher.dividend_snapshot(["hk.00700"])
     assert "yield_ttm" in snap["hk.00700"]
@@ -188,7 +188,7 @@ def test_fake_fetcher_supports_metrics_and_fx():
 
 def test_dividend_rows_many_keeps_raw_status_and_maps_keys():
     calls: list = []
-    fetcher = FinpipeFetcher(client=FakeClient("cn", calls),
+    fetcher = WmshareFetcher(client=FakeClient("cn", calls),
                              hk_client=FakeClient("hk", calls))
     rows = fetcher.dividend_rows_many(["600519", "hk.00700"], limit=10)
     assert rows["600519"][0]["props"]["状态"] == "预案"
@@ -200,7 +200,7 @@ def test_dividend_rows_many_keeps_raw_status_and_maps_keys():
 
 def test_high_yield_symbols_uses_index_query():
     calls: list = []
-    fetcher = FinpipeFetcher(client=FakeClient("cn", calls),
+    fetcher = WmshareFetcher(client=FakeClient("cn", calls),
                              hk_client=FakeClient("hk", calls))
     pool = fetcher.high_yield_symbols("cn", limit=50)
     assert pool == [{

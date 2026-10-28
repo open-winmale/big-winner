@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **上游数据依赖更名 finpipe → wmshare**：SDK 仓与 PyPI 发行名改为 wmshare
+  （GitHub open-winmale/wmshare，SDK 1.7.0 起用新名）。本仓 import（7 处）、
+  类名（`WmshareFetcher` / `WmshareBiglyData`）、安装指引与页面文案全部同步；
+  凭证配置只认新名：环境变量 `FINPIPE_*` → `WMSHARE_*`、凭证文件
+  `~/.finpipe/credentials.env` → `~/.wmshare/credentials.env`（`OPEN_PLATFORM_*`
+  别名保留，与 SDK `from_env` 口径一致）；安装命令改为
+  `git clone https://github.com/open-winmale/wmshare.git && pip install -e ./wmshare`。
+  已按旧文档配置凭证的用户需迁移到新名（setup 页与 README 均有提示）。
+
 ## 1.6.0 — 2026-10-27
 
 ### Added

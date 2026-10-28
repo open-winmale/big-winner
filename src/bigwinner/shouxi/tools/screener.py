@@ -5,7 +5,7 @@
   全部走平台选股通道 `wm-screen-index` 的 conditions action（任意 INDICATOR
   条件、市场参数、fields 投影、top_n），与平台 web「选股」同一引擎——实测
   `$PE_TTM_LAST` / `$PB_TTM_LAST` / 股息率(cn+hk) 均可用（2026-10-26）。
-  finpipe 原生 index 积木实测已 500（spec 契约变更，缺 fields），列 roadmap。
+  wmshare 原生 index 积木实测已 500（spec 契约变更，缺 fields），列 roadmap。
 - 输出 = rows + columns：数字本身就是入选证据；缺失显式 None，不冒充。
 - 通道不可用（未装 wm.sh 等）→ unavailable + 原因，页面降级，绝不静默。
 - 选股结果 ≠ 推荐；格雷厄姆为简化口径（PE<15 ∧ PB<1.5，数学上蕴含

@@ -135,7 +135,7 @@ def test_backtest_auto_mode_still_validates_metric(base_url):
 
 def test_real_fetcher_bars_sorted_ascending():
     """store 返回新在前；fetcher 必须转成旧→新升序（拨测状态机的前提）。"""
-    from bigwinner.bigly.fetchers import FinpipeBiglyData
+    from bigwinner.bigly.fetchers import WmshareBiglyData
 
     class StubCli:
         max_limit = 100
@@ -146,13 +146,13 @@ def test_real_fetcher_bars_sorted_ascending():
                     {"date": "2026-10-21", "open": 1, "high": 1, "low": 1, "close": 1},
                     {"date": "2026-10-22", "open": 2, "high": 2, "low": 2, "close": 2}]
 
-    bars = FinpipeBiglyData(client=StubCli()).bars("600519", "1y")
+    bars = WmshareBiglyData(client=StubCli()).bars("600519", "1y")
     dates = [b["date"] for b in bars]
     assert dates == sorted(dates) == ["2026-10-21", "2026-10-22", "2026-10-23"]
 
 
 def test_symbols_search_endpoint(base_url):
-    """代码搜索：与收息佬共用离线代码目录（finpipe 未装时空结果不报错）。"""
+    """代码搜索：与收息佬共用离线代码目录（wmshare 未装时空结果不报错）。"""
     base, _ = base_url
     status, body = _get(base + "/api/bigly/symbols?q=maotai")
     body = json.loads(body)

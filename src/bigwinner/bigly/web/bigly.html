@@ -332,7 +332,7 @@ async function resolveSymName(){
   }catch(e){ /* 保持无名，不阻塞加载 */ }
 }
 
-/* ---- 标的搜索联想（finpipe 离线全市场代码目录）---- */
+/* ---- 标的搜索联想（wmshare 离线全市场代码目录）---- */
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
   (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let symDebounce = null, symDrop = null, symResults = [];
@@ -682,7 +682,7 @@ function renderResult(r){
   try{
     const meta = await (await fetch("/api/bigly/meta")).json();
     if(meta.demo) $("demo-badge").textContent = "演示数据";
-    $("key-badge").textContent = meta.demo ? "" : "finpipe 实时数据";
+    $("key-badge").textContent = meta.demo ? "" : "wmshare 实时数据";
   }catch(e){ /* ignore */ }
   load();  // 进页自动加载默认标的（半年窗口 → 通道 + 推荐区间 + 回放直出）
 })();

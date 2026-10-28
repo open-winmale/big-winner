@@ -68,10 +68,11 @@
       <div class="step-no">2</div>
       <div class="step-body">
         <h3>写入本机凭证文件（推荐）</h3>
-        <p>创建 <code class="inline">~/.finpipe/credentials.env</code>，内容两行：</p>
-        <pre class="block">FINPIPE_CLIENT_ID=你的client_id
-FINPIPE_CLIENT_SECRET=你的api-key</pre>
+        <p>创建 <code class="inline">~/.wmshare/credentials.env</code>，内容两行：</p>
+        <pre class="block">WMSHARE_CLIENT_ID=你的client_id
+WMSHARE_CLIENT_SECRET=你的api-key</pre>
         <p>保存后<strong>重启工具服务</strong>即可生效。凭证文件不要提交到任何 git 仓库。</p>
+        <p>从旧版本升级：原 <code class="inline">FINPIPE_*</code> 环境变量与 <code class="inline">~/.finpipe/credentials.env</code> 已随上游更名分别改为 <code class="inline">WMSHARE_*</code> 与 <code class="inline">~/.wmshare/credentials.env</code>，请把已配置的凭证迁移到新名。</p>
       </div>
     </div>
 
@@ -87,7 +88,7 @@ PYTHONPATH=src python -m bigwinner.server --port 8787</pre>
 
     <div class="note">
       也可以不改文件、只用环境变量启动：
-      <code class="inline">FINPIPE_CLIENT_ID=... FINPIPE_CLIENT_SECRET=... python -m bigwinner.server</code>
+      <code class="inline">WMSHARE_CLIENT_ID=... WMSHARE_CLIENT_SECRET=... python -m bigwinner.server</code>
     </div>
   </section>
 
@@ -108,7 +109,7 @@ PYTHONPATH=src python -m bigwinner.server --port 8787</pre>
   </section>
 
   <div class="footer">
-    <div>本工具仅做持仓数据的统计聚合，不构成任何投资建议；数据来自 finpipe，最终以上市公司公告为准；历史分红不代表未来。</div>
+    <div>本工具仅做持仓数据的统计聚合，不构成任何投资建议；数据来自 wmshare，最终以上市公司公告为准；历史分红不代表未来。</div>
   </div>
 </main>
 

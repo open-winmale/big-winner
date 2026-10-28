@@ -8,8 +8,8 @@
 > 条件选股（**选股**）。
 > **v1.6.0** · [GitHub](https://github.com/open-winmale/big-winner) ·
 > [在线体验（只读演示）](https://open-winmale.github.io/big-winner/) · 数据来自
-> [finpipe](https://github.com/open-winmale/finpipe)，只做事实与统计聚合；
-> 工具代码 MIT；数据来自 finpipe（非商业许可，商业使用需另行授权，见「许可与合规」）。
+> [wmshare](https://github.com/open-winmale/wmshare)，只做事实与统计聚合；
+> 工具代码 MIT；数据来自 wmshare（非商业许可，商业使用需另行授权，见「许可与合规」）。
 
 | 收息佬 · 持仓透视与分红日历 | 波段 · 估值买卖点区间参考 |
 |---|---|
@@ -32,11 +32,11 @@
 | | 许可 | 商业使用 |
 |---|---|---|
 | **本项目代码** | **MIT** | ✅ 允许 |
-| **finpipe（数据依赖）** | [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) | ❌ **禁止，需另行授权** |
+| **wmshare（数据依赖）** | [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) | ❌ **禁止，需另行授权** |
 
-本项目是 source-available 的 finpipe 的**下游工具**。工具代码本身 MIT 可自由使用与改造，
-但**只要通过 finpipe 取数，运行时即受非商业许可约束**。若你要做商业用途，
-需先向 finpipe 维护方取得商业授权，或替换为自有数据源（`Fetcher` 是可替换接口）。
+本项目是 source-available 的 wmshare 的**下游工具**。工具代码本身 MIT 可自由使用与改造，
+但**只要通过 wmshare 取数，运行时即受非商业许可约束**。若你要做商业用途，
+需先向 wmshare 维护方取得商业授权，或替换为自有数据源（`Fetcher` 是可替换接口）。
 
 **本工具不提供、也永远不会提供任何买卖时点、目标价或仓位建议。**
 输出全部为描述性统计，不代表投资建议；数据最终以上市公司公告为准。
@@ -54,7 +54,7 @@
 ## 快速开始（开箱即演示，换 Key 变实时）
 
 ```bash
-# 启动（零依赖：无需 finpipe、无需凭证）——一条命令，工具总览 + 全部小工具
+# 启动（零依赖：无需 wmshare、无需凭证）——一条命令，工具总览 + 全部小工具
 cd big-winner
 PYTHONPATH=src python -m bigwinner.shouxi    # 门户 → http://127.0.0.1:8787
 ```
@@ -67,20 +67,21 @@ PYTHONPATH=src python -m bigwinner.shouxi    # 门户 → http://127.0.0.1:8787
 （微信扫码登录，注册即送免费额度），然后：
 
 ```bash
-# 真实模式需要安装 finpipe（数据依赖）
-git clone https://github.com/open-winmale/finpipe.git && pip install -e ./finpipe
+# 真实模式需要安装 wmshare（数据依赖）
+git clone https://github.com/open-winmale/wmshare.git && pip install -e ./wmshare
 ```
 
 页面右上角「数据源 Key」→ 粘贴 client_id 与 api-key → **验证通过立即热切换为
-实时全市场数据，无需重启**（Key 只写本机 `~/.finpipe/credentials.env`，权限 600，
+实时全市场数据，无需重启**（Key 只写本机 `~/.wmshare/credentials.env`，权限 600，
 不会回显）。也可以启动前就配好凭证，服务直接以实时模式启动：
 
 ```bash
-export FINPIPE_CLIENT_ID=...
-export FINPIPE_CLIENT_SECRET=...
-# 或写入 ~/.finpipe/credentials.env
+export WMSHARE_CLIENT_ID=...
+export WMSHARE_CLIENT_SECRET=...
+# 或写入 ~/.wmshare/credentials.env
 PYTHONPATH=src python -m bigwinner.shouxi
 ```
+> 从旧版本升级：凭证配置名已随上游更名——`FINPIPE_*` 环境变量改为 `WMSHARE_*`，`~/.finpipe/credentials.env` 改为 `~/.wmshare/credentials.env`，已配置的用户请迁移。
 
 > `python -m bigwinner.server` 为兼容别名，等价于收息佬入口（即门户）。
 > 波段也可独立启动（互不影响）：`PYTHONPATH=src python -m bigwinner.bigly`
@@ -107,7 +108,7 @@ PYTHONPATH=src python -m bigwinner.shouxi
 **均值 ± Nσ** 通道——σ 为窗口内估值序列的**总体标准差（÷N）**，下轨截 0（估值倍数
 不为负）；−2σ 为低估线、+2σ 为高估线，另有 ±1σ 内线与均值/中位参考线。当前位置以
 z=(current−avg)/σ 描述，分五档，并给出 ±2σ 通道内交易日覆盖率与历史分位。
-**窗口上限 3 年**（半年/1y/2y/3y）。数据来自 finpipe `cli.valuation.hist_stats`
+**窗口上限 3 年**（半年/1y/2y/3y）。数据来自 wmshare `cli.valuation.hist_stats`
 （与平台同源的宿主 HIST_STATS）；亏损期 PE 无数据、净资产为负期间不参与统计。
 
 **买卖点换算**：`价格 = 现价 × 目标倍数 / 当前倍数`（线性，隐含口径内 EPS/BPS 恒定）。
@@ -115,7 +116,7 @@ z=(current−avg)/σ 描述，分五档，并给出 ±2σ 通道内交易日覆�
 PE/PB 倍数（如 PE 12/25、金融股 PB 0.8/1.0）。通道低估线/高估线不再作为手动来源，
 仅当推荐区间搜索全程无完整进出时作为内部回退，并如实标注。
 
-**代码搜索**：输入框支持代码/名称/拼音联想（与收息佬共用 finpipe 离线全市场代码
+**代码搜索**：输入框支持代码/名称/拼音联想（与收息佬共用 wmshare 离线全市场代码
 目录，零网络），选中即自动加载；也可直接输 6 位代码回车。
 
 **推荐区间**（窗口内自动搜点，回答「从哪买、到哪卖比较合理」）：穷举候选买卖倍数
@@ -179,7 +180,7 @@ T+1 买入当日不卖；**止盈/止损出场后资金回笼，卖出次日可�
 **每策略 1 次查询**；通道未配置（无 wm.sh）时页面如实降级提示，不静默。
 结果按策略口径排序、口径列前置；「—」为取数缺失，不冒充；demo 模式用
 确定性罐头数据，零凭证可试。**选股结果 ≠ 推荐**；深度体检接
-「收息佬 · 分红质量 / 持续性分析」。finpipe 原生 index 积木暂不可用
+「收息佬 · 分红质量 / 持续性分析」。wmshare 原生 index 积木暂不可用
 （spec 契约变更，roadmap 跟进，作为无 wm.sh 场景的备选降级路径）。
 
 ## 收息佬 · 方法论
@@ -330,5 +331,5 @@ cd web && npm test            # 前端单测（CI web job 同跑 typecheck + bui
 
 ## 免责声明
 
-本工具集仅做持仓数据的统计聚合，不构成任何投资建议；数据来自 finpipe，
+本工具集仅做持仓数据的统计聚合，不构成任何投资建议；数据来自 wmshare，
 最终以上市公司公告为准；历史分红不代表未来。投资有风险，决策需独立判断。
