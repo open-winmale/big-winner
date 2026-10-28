@@ -258,7 +258,7 @@ def analyze(
             price=price_map.get(code),
             market=market,
             currency="HKD" if market == "hk" else "CNY",
-            fin_currency="CNY",  # 数据源港股财报在平台已统一折算为 CNY
+            fin_currency="CNY",  # 港股财报在平台已统一折算为 CNY
         )
         if row.currency == "CNY":
             row.fx_to_cny = 1.0
