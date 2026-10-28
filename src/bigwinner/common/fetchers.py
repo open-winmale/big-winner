@@ -109,7 +109,7 @@ class WmshareFetcher:
             except ImportError as exc:  # pragma: no cover
                 raise RuntimeError(
                     "未安装 wmshare。请先：git clone https://github.com/open-winmale/wmshare，"
-                    "再 pip install -e ./wmshare（非商业许可）。"
+                    "再 pip install -e ./wmshare。"
                 ) from exc
             client = wmshare.Client.from_env()
         self.cli = client

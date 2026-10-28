@@ -172,7 +172,7 @@ async function openHistory(): Promise<void> {
 
     <div class="footer">
       <div>本工具仅做持仓数据的统计聚合，不构成任何投资建议；数据来自 wmshare，最终以上市公司公告为准；历史分红不代表未来。</div>
-      <div style="margin-top:6px">收息佬（big-winner） · MIT 开源 · 数据由 wmshare 提供（PolyForm Noncommercial，仅限非商业使用）</div>
+      <div style="margin-top:6px">收息佬（big-winner） · MIT 开源 · 数据由 wmshare 提供（BSD-3-Clause 开源）</div>
     </div>
 
     <!-- 诊股弹层 -->

@@ -1449,7 +1449,7 @@
         <div class="toolbar">
           <button class="primary" id="key-save">验证并保存</button>
           <button class="ghost" id="key-cancel">取消</button>
-          <span class="muted" style="font-size:12px">非商业用途免费</span>
+          <span class="muted" style="font-size:12px">免费</span>
         </div>
       </div>
       <div id="key-result" style="margin-top:8px"></div>`);

@@ -9,7 +9,7 @@
 - Python ≥ 3.10（后端零第三方依赖，`pip install -e ".[dev]"` 只装 pytest）
 - Node ≥ 18.18 + npm（仅前端开发需要）
 - 真实数据依赖 [wmshare](https://github.com/open-winmale/wmshare)（可选：不装也能跑，
-  自动进演示模式）——PolyForm Noncommercial，仅限非商业使用
+  自动进演示模式）——BSD-3-Clause 开源
 
 ## 本地开发
 

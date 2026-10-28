@@ -9,7 +9,7 @@
 > **v1.6.0** · [GitHub](https://github.com/open-winmale/big-winner) ·
 > [在线体验（只读演示）](https://open-winmale.github.io/big-winner/) · 数据来自
 > [wmshare](https://github.com/open-winmale/wmshare)，只做事实与统计聚合；
-> 工具代码 MIT；数据来自 wmshare（非商业许可，商业使用需另行授权，见「许可与合规」）。
+> 工具代码 MIT；数据来自 wmshare（BSD-3-Clause 开源；云端数据服务需开放平台凭证/额度）。
 
 | 收息佬 · 持仓透视与分红日历 | 波段 · 估值买卖点区间参考 |
 |---|---|
@@ -32,11 +32,11 @@
 | | 许可 | 商业使用 |
 |---|---|---|
 | **本项目代码** | **MIT** | ✅ 允许 |
-| **wmshare（数据依赖）** | [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) | ❌ **禁止，需另行授权** |
+| **wmshare（数据依赖）** | [BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause) | ✅ 允许（云端数据服务需开放平台凭证/额度） |
 
 本项目是 source-available 的 wmshare 的**下游工具**。工具代码本身 MIT 可自由使用与改造，
-但**只要通过 wmshare 取数，运行时即受非商业许可约束**。若你要做商业用途，
-需先向 wmshare 维护方取得商业授权，或替换为自有数据源（`Fetcher` 是可替换接口）。
+wmshare 本身已放开商用（BSD-3-Clause）；但取数走云端数据服务，仍需
+开放平台账号与额度，服务条款以开放平台为准（`Fetcher` 是可替换接口，可换自有数据源）。
 
 **本工具不提供、也永远不会提供任何买卖时点、目标价或仓位建议。**
 输出全部为描述性统计，不代表投资建议；数据最终以上市公司公告为准。

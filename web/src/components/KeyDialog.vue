@@ -86,7 +86,7 @@ async function save(): Promise<void> {
             : (result?.ok ? (status?.demo ? '已保存 ✓' : '已生效 ✓')
               : (status?.custom ? '验证并换 Key' : '验证并保存')) }}
         </button>
-        <span class="muted" style="font-size:12px">非商业用途免费</span>
+        <span class="muted" style="font-size:12px">免费</span>
       </div>
     </div>
     <div v-if="result" style="margin-top:10px">
