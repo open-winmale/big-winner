@@ -117,6 +117,7 @@ export const api = {
   keyStatus: () => request<KeyStatus>('key-status'),
   keySave: (payload: { client_id: string; client_secret: string }) =>
     request<KeySaveResult>('key-save', payload),
+  keyClear: () => request<KeySaveResult>('key-clear'),
   dividendXray: (payload: { positions: PositionPayload[]; deep: boolean }) =>
     request<XrayResult>('dividend-xray', payload),
   dividendQuality: (payload: { positions: PositionPayload[] }) =>

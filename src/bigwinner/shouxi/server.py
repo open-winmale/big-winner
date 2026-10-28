@@ -25,7 +25,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from bigwinner.bigly import server as bigly_srv
-from bigwinner.common import fetchers
+from bigwinner.common import credentials, fetchers
 from bigwinner.common.export import xray_csv
 from bigwinner.common.symbols import SymbolDirectory
 from bigwinner.common.store import Store
@@ -93,7 +93,9 @@ class Runtime:
             if self.demo:
                 self._fetcher = fetchers.FakeFetcher(**_demo_data())
             else:
-                self._fetcher = fetchers.CachedFetcher(fetchers.WmshareFetcher())
+                # 凭证优先取页面保存进本机数据库的 Key；env/文件由 SDK 兜底
+                self._fetcher = fetchers.CachedFetcher(
+                    fetchers.WmshareFetcher(credentials=credentials.load()))
         return self._fetcher
 
     def rekey(self, client_id: str, client_secret: str) -> bool:
@@ -111,8 +113,11 @@ class Runtime:
             inner.rekey(client_id, client_secret)
             self._fetcher._store.clear()  # 旧 Key 的缓存全部作废
         else:
-            self._fetcher = fetchers.CachedFetcher(
-                fetchers.WmshareFetcher(client=probe))
+            self._fetcher = fetchers.CachedFetcher(fetchers.WmshareFetcher(
+                client=probe,
+                hk_client=wmshare.Client(client_id=client_id,
+                                         client_secret=client_secret,
+                                         market="hk")))
         return True
 
 
@@ -802,31 +807,25 @@ def run_screener(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def key_status(_: dict[str, Any]) -> dict[str, Any]:
-    """当前凭证状态：是否用着自己的 Key（只回布尔与来源，绝不回 Key 本体）。"""
+    """当前凭证状态：是否用着自己的 Key（只回布尔与来源，绝不回 Key 本体）。
+
+    口径比启动判定宽：env 只配了一半（有 client_id 没 secret）也算 custom，
+    引导用户补全；库里的 Key 由 has_own_credentials 优先判定。
+    """
     env_id = (os.environ.get("WMSHARE_CLIENT_ID")
               or os.environ.get("OPEN_PLATFORM_CLIENT_ID"))
-    custom = bool(env_id) or \
+    custom = credentials.has_custom() or bool(env_id) or \
         Path.home().joinpath(".wmshare", "credentials.env").exists()
     return {"custom": custom, "demo": RUNTIME.demo}
 
 
-def _write_credentials(cid: str, sec: str) -> None:
-    """Key 落盘 ~/.wmshare/credentials.env（权限 600，不回显）。"""
-    cred = Path.home() / ".wmshare" / "credentials.env"
-    cred.parent.mkdir(parents=True, exist_ok=True)
-    cred.write_text(
-        f"WMSHARE_CLIENT_ID={cid}\nWMSHARE_CLIENT_SECRET={sec}\n",
-        encoding="utf-8")
-    cred.chmod(0o600)
-
-
 def key_save(payload: dict[str, Any]) -> dict[str, Any]:
-    """页面直接保存 Key：写 ~/.wmshare/credentials.env + 验证。
+    """页面直接保存 Key：先在线验证，通过后存本机数据库并热切换。
 
     真实模式：验证通过立即热切换，缓存作废。
     演示模式：验证通过后直接热切换为实时取数（wmshare 可用即可），无需重启；
-    未安装 wmshare 时只落盘并如实提示。换 Key 的入口任何模式下都可用。
-    安全：响应不回显 Key；写文件权限 600；验证失败不落地。
+    未安装 wmshare 时只保存并如实提示。换 Key 的入口任何模式下都可用。
+    安全：响应不回显 Key；验证失败不落地，库里仍是上一个 Key。
     """
     global _BIGLY_DATA, _SCREENER_DATA
     cid = str(payload.get("client_id") or "").strip()
@@ -838,20 +837,22 @@ def key_save(payload: dict[str, Any]) -> dict[str, Any]:
         try:
             import wmshare  # noqa: PLC0415
         except ImportError:
-            _write_credentials(cid, sec)
+            credentials.save(cid, sec)
             return {"ok": True, "message": "Key 已保存（本机未安装 wmshare，"
-                    "跳过在线验证）~/.wmshare/credentials.env。安装 wmshare 后"
-                    "重启真实模式即生效。"}
+                    "跳过在线验证）。安装 wmshare 后重启真实模式即生效。"}
         try:
             probe = wmshare.Client(client_id=cid, client_secret=sec)
             probe.call("kline.query_bars", sym="600036", limit=1)  # 真实验证
         except Exception:  # noqa: BLE001 - 凭证错/网络错都不落地
             raise ToolError("Key 验证失败：请检查是否复制完整（client_id + "
-                            "api-key）。旧文件未受影响。") from None
-        _write_credentials(cid, sec)
-        # 热切换：复用刚验证过的 client 转实时取数，波段/筛选取数实例也重建
-        RUNTIME._fetcher = fetchers.CachedFetcher(
-            fetchers.WmshareFetcher(client=probe))
+                            "api-key）。原保存的 Key 未受影响。") from None
+        credentials.save(cid, sec)
+        # 热切换：复用刚验证过的 client 转实时取数（HK 同 Key 显式建，
+        # 否则懒加载 from_env 会拿不到/拿错凭证），波段/筛选取数实例也重建
+        RUNTIME._fetcher = fetchers.CachedFetcher(fetchers.WmshareFetcher(
+            client=probe,
+            hk_client=wmshare.Client(client_id=cid, client_secret=sec,
+                                     market="hk")))
         RUNTIME.demo = False
         _BIGLY_DATA = None
         _SCREENER_DATA = None
@@ -861,10 +862,27 @@ def key_save(payload: dict[str, Any]) -> dict[str, Any]:
     ok = RUNTIME.rekey(cid, sec)
     if not ok:
         raise ToolError("Key 验证失败：请检查是否复制完整（client_id + api-key）。"
-                        "旧 Key 未受影响，工具仍用原凭证。")
-    _write_credentials(cid, sec)
-    return {"ok": True, "message": "Key 已验证并保存（~/.wmshare/credentials.env），"
-                                   "额度从此独立。缓存已清空，立即生效。"}
+                        "原 Key 未受影响，工具仍用原凭证。")
+    credentials.save(cid, sec)
+    return {"ok": True, "message": "Key 已验证并保存，额度从此独立。"
+                                   "缓存已清空，立即生效。"}
+
+
+def key_clear(_: dict[str, Any]) -> dict[str, Any]:
+    """清除页面保存在本机数据库的 Key，回到演示模式。
+
+    只清数据库——env/凭证文件来源的凭证不受影响（那需要用户自行移除）。
+    """
+    global _BIGLY_DATA, _SCREENER_DATA
+    if not credentials.clear():
+        raise ToolError("本机数据库没有保存过 Key。当前凭证若来自环境变量或"
+                        "凭证文件，请自行移除后重启。")
+    if not RUNTIME.demo:
+        RUNTIME.demo = True
+        RUNTIME._fetcher = None  # 下次取数按演示模式重建
+        _BIGLY_DATA = None
+        _SCREENER_DATA = None
+    return {"ok": True, "message": "已清除保存的 Key，回到演示模式（历史快照）。"}
 
 
 HANDLERS = {
@@ -884,6 +902,7 @@ HANDLERS = {
     "screener": run_screener,
     "key-status": key_status,
     "key-save": key_save,
+    "key-clear": key_clear,
     # 波段：复用其纯函数 API，data 用本进程的惰性实例
     "bigly/channel": lambda payload: bigly_srv.run_channel(bigly_data(), payload),
     "bigly/backtest": lambda payload: bigly_srv.run_backtest(bigly_data(), payload),

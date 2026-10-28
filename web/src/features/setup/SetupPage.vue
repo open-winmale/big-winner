@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useApp } from '@/store/useApp';
+
+const app = useApp();
 </script>
 
 <template>
@@ -13,38 +16,67 @@
       <div class="step">
         <div class="step-no">1</div>
         <div class="step-body">
-          <h3>注册开放平台，获取 AppID</h3>
-          <p>打开 <a href="https://open.winmale.com" target="_blank" rel="noopener">open.winmale.com</a>，
-             微信扫码登录（注册即送免费额度）。</p>
-          <p>右上角「我的」→「开放平台」→ 左侧「我的应用」→「查看应用信息」，
-             复制 <code class="inline">client_id</code> 和 <code class="inline">api-key</code>（即 client_secret）。</p>
+          <h3>获取 AppID（免费）</h3>
+          <p>
+            <a class="big-link" href="https://open.winmale.com" target="_blank" rel="noopener">open.winmale.com →</a>
+          </p>
+          <p>微信扫码登录（注册即送免费额度）→「我的」→「开放平台」→「我的应用」→
+             「查看应用信息」，复制 <code class="inline">client_id</code> 和
+             <code class="inline">api-key</code>（即 client_secret）。</p>
         </div>
       </div>
 
       <div class="step">
         <div class="step-no">2</div>
         <div class="step-body">
-          <h3>页面内直接验证并保存（推荐）</h3>
-          <p>点右上角「数据源 Key」，粘贴 client_id 与 api-key，
-             <strong>验证通过立即热切换</strong>，无需重启（Key 只写本机
-             <code class="inline">~/.wmshare/credentials.env</code>，权限 600，不会回显）。</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-no">3</div>
-        <div class="step-body">
-          <h3>或写入本机凭证文件后重启</h3>
-          <pre class="block">WMSHARE_CLIENT_ID=你的client_id
-WMSHARE_CLIENT_SECRET=你的api-key</pre>
-          <p>凭证文件不要提交到任何 git 仓库。也可以只用环境变量启动：
-            <code class="inline">WMSHARE_CLIENT_ID=... WMSHARE_CLIENT_SECRET=... python -m bigwinner.shouxi</code></p>
+          <h3>页面内粘贴保存（推荐）</h3>
+          <p>点下面的按钮（或页面右上角「数据源 Key」），粘贴 client_id 与 api-key，
+             <strong>验证通过立即热切换</strong>，无需重启。</p>
+          <p>Key 只存本机工具数据库，不入 git、不回显；随时可在同一窗口
+             「清除并回到演示」。</p>
+          <div class="toolbar" style="margin-top:10px">
+            <button class="primary" @click="app.openKeyDialog()">🔑 打开保存窗口</button>
+          </div>
         </div>
       </div>
 
       <div class="note">
         保存后演示模式立即热切换为实时（无需重启），顶栏徽章变成「已用自己的 Key」。
       </div>
+    </section>
+
+    <section class="card">
+      <details class="advanced">
+        <summary>高级：命令行方式配置（可选，页面保存之外的兼容途径）</summary>
+        <div class="adv-body">
+          <p>页面保存的 Key 存本机数据库；以下两种传统方式仍然可读，适合无网页的
+             服务器/脚本场景：</p>
+          <p><strong>方式 A：环境变量启动</strong>（按操作系统任选其一）</p>
+          <pre class="block"># macOS / Linux
+export WMSHARE_CLIENT_ID=你的client_id
+export WMSHARE_CLIENT_SECRET=你的api-key
+python run.py
+
+# Windows（CMD）
+set WMSHARE_CLIENT_ID=你的client_id
+set WMSHARE_CLIENT_SECRET=你的api-key
+python run.py
+
+# Windows（PowerShell）
+$env:WMSHARE_CLIENT_ID="你的client_id"
+$env:WMSHARE_CLIENT_SECRET="你的api-key"
+python run.py</pre>
+          <p><strong>方式 B：写入凭证文件</strong>
+             <code class="inline">~/.wmshare/credentials.env</code>
+             （Windows 为 <code class="inline">C:\Users\你\.wmshare\credentials.env</code>）：</p>
+          <pre class="block">WMSHARE_CLIENT_ID=你的client_id
+WMSHARE_CLIENT_SECRET=你的api-key</pre>
+          <p>凭证内容不要提交到任何 git 仓库；也不要直接分享存了 Key 的
+             <code class="inline">data/fptools.db</code>（里面还有你的快照数据，
+             分享前先在页面「清除 Key」）。读取优先级：页面保存的数据库 &gt;
+             环境变量 &gt; 凭证文件。</p>
+        </div>
+      </details>
     </section>
 
     <section class="card">
@@ -79,11 +111,19 @@ WMSHARE_CLIENT_SECRET=你的api-key</pre>
 .step-body { flex: 1; }
 .step-body h3 { margin: 4px 0 8px; font-size: 15px; }
 .step-body p { margin: 0 0 10px; color: var(--text-2); }
+.big-link { font-size: 15px; font-weight: 620; }
 code.inline {
   background: var(--surface-2); border: 1px solid var(--line);
   border-radius: 6px; padding: 1px 7px; font-size: 13px;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
+.advanced { font-size: 13.5px; }
+.advanced summary {
+  cursor: pointer; font-weight: 620; color: var(--text-2);
+  padding: 4px 0;
+}
+.adv-body { margin-top: 12px; color: var(--text-2); }
+.adv-body p { margin: 10px 0; }
 pre.block {
   background: var(--surface-2); border: 1px solid var(--line);
   border-radius: var(--radius-sm); padding: 14px 16px; overflow-x: auto;

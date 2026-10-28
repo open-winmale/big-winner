@@ -20,7 +20,7 @@ const ctaText = computed(() =>
     <span class="tag">{{ app.pagesDemo ? '只读演示' : '演示数据' }}</span>
     <span class="txt">
       真实数据的历史快照<template v-if="app.info?.demo_as_of">，截止
-        <strong>{{ app.info.demo_as_of }}</strong></template>，非实时<template v-if="symbolsText">；{{ symbolsText }}</template>。<template v-if="app.pagesDemo">本地运行完整版即可换自己的 Key 看实时全市场。</template><template v-else>配置自己的
+        <strong>{{ app.info.demo_as_of }}</strong></template>，非实时<template v-if="symbolsText">；{{ symbolsText }}</template>。<template v-if="app.pagesDemo">本地运行完整版，页面内粘贴 Key 即变实时全市场（无需环境变量）。</template><template v-else>配置自己的
         Key 即变实时工具，无需重启。</template>
     </span>
     <button class="cta" @click="app.openKeyDialog()">{{ ctaText }}</button>

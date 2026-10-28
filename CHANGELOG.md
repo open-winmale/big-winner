@@ -4,12 +4,34 @@
 
 ### Added
 
+- **页面保存的 Key 改存本机数据库，新增「清除并回到演示」**：网页「数据源 Key」
+  保存的凭证从 `~/.wmshare/credentials.env` 改为 `data/fptools.db` 新增的
+  `credentials` 表（`bigwinner.common.credentials`，路径由代码解析，无跨操作系统
+  差异；`data/` 已 gitignore）。读取优先级：数据库 > 环境变量 > 凭证文件，后两者
+  保持只读兼容（旧版页面保存的 Key 无感迁移）；页面保存不再写文件。新增
+  `POST /api/key-clear` 与 KeyDialog「清除并回到演示」按钮（文件时代删除别扭，
+  数据库时代补齐），真实模式清除后回演示模式并重建取数实例；提示分享
+  `data/fptools.db` 前先清除 Key。新增跨平台启动入口 `run.py`：
+  `python run.py` 一条命令 Windows / macOS / Linux 通用（Windows CMD/PowerShell
+  不支持 `PYTHONPATH=src` 前缀语法），参数原样透传。
 - **凭证错误显式化**：实时模式下数据源拒绝请求（Key 无效/过期、401/403）时，
   此前各票取数静默失败、页面满屏「—」无从分辨；现在取数层把凭证类异常记入
   `auth_error` 并随收息透视/记账/日历/质量/诊股结果透出，收息页顶部显示红色
   横幅并给出「检查 / 更换 Key」入口。每次新生成时重新评估（横幅只反映最近
   一次取数），换 Key 成功后自动清除；demo 模式永不触发。波段/选股页此前已
   有显式错误位，不在本项范围内。
+
+### Changed
+
+- **换 Key 动线去环境变量化**（用户反馈：体验页面应支持保存 Key、引导给链接）：
+  KeyDialog 的获取引导压缩为一行「open.winmale.com 免费申请」链接（存储说明改为
+  「只存本机工具数据库，不入 git、不回显」）；/setup 简化为两步主路径（① 获取
+  AppID 大链接 ② 页面内粘贴保存，按钮直达 KeyDialog），环境变量/凭证文件降级为
+  折叠的「高级：命令行方式」并给出三平台变体（`export` / `set` / `$env:`）；
+  GitHub Pages 只读演示的换 Key 指引改为「两步变实时」（拿 AppID + `python run.py`
+  本地运行后页面内粘贴，全程无环境变量），演示横幅文案同步。顺带修复：演示→实时
+  热切换与 `Runtime.rekey` 兜底分支此前只显式建 CN client，HK client 会走
+  `from_env` 拿不到/拿错凭证，现同 Key 显式构建。
 
 ## 1.6.0 — 2026-10-27
 

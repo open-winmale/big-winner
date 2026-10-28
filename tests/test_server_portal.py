@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import json
 import pathlib  # noqa: F401 - monkeypatch "pathlib.Path.home" 字符串目标的可读性提示
+import sys
 import threading
 import time
+import types
 import urllib.request
 from http.server import ThreadingHTTPServer
 
@@ -16,6 +18,7 @@ import pytest
 
 import bigwinner.shouxi.server as srv
 from bigwinner.bigly.fetchers import DemoBiglyData
+from bigwinner.common import credentials
 
 
 @pytest.fixture(scope="module")
@@ -172,6 +175,96 @@ def test_key_status_recognizes_alias(monkeypatch, tmp_path):
 
     monkeypatch.setenv("OPEN_PLATFORM_CLIENT_ID", "alias")
     assert srv.key_status({})["custom"] is True
+
+
+def test_key_status_recognizes_saved_db_key(monkeypatch, tmp_path):
+    """页面保存进本机数据库的 Key 也算 custom（env/文件都不用配）。"""
+    monkeypatch.delenv("WMSHARE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("OPEN_PLATFORM_CLIENT_ID", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert srv.key_status({})["custom"] is False  # 库已被 conftest 指向空临时库
+    credentials.save("cid", "sec")
+    assert srv.key_status({})["custom"] is True
+
+
+def _fake_wmshare(monkeypatch, client_cls):
+    monkeypatch.setitem(sys.modules, "wmshare",
+                        types.SimpleNamespace(Client=client_cls))
+
+
+def test_key_save_demo_verify_ok_hot_swaps(monkeypatch):
+    """demo 模式保存有效 Key：验证 → 落库 → 热切换为实时，无需重启。"""
+    built: list[dict] = []
+
+    class FakeClient:
+        def __init__(self, **kw):
+            built.append(kw)
+
+        def call(self, *a, **k):
+            return []
+
+    _fake_wmshare(monkeypatch, FakeClient)
+    monkeypatch.setattr(srv.RUNTIME, "demo", True)
+    monkeypatch.setattr(srv.RUNTIME, "_fetcher", None, raising=False)
+
+    r = srv.key_save({"client_id": "cid", "client_secret": "sec"})
+    assert r["ok"] is True
+    assert srv.RUNTIME.demo is False
+    assert credentials.load() == ("cid", "sec")
+    # 热切换复用探测 client（不重复建 CN），另为 HK 同 Key 显式建一个
+    assert len(built) == 2
+    assert any(kw.get("market") == "hk" for kw in built)
+
+
+def test_key_save_invalid_key_not_persisted(monkeypatch):
+    """demo 模式保存无效 Key：验证失败不落地，库里仍是原 Key。"""
+    class BadClient:
+        def __init__(self, **kw):
+            raise RuntimeError("HTTP 401")
+
+    _fake_wmshare(monkeypatch, BadClient)
+    monkeypatch.setattr(srv.RUNTIME, "demo", True)
+    credentials.save("old-cid", "old-sec")
+
+    with pytest.raises(srv.ToolError):
+        srv.key_save({"client_id": "new", "client_secret": "bad"})
+    assert credentials.load() == ("old-cid", "old-sec")
+    assert srv.RUNTIME.demo is True
+
+
+def test_key_save_without_wmshare_still_persists(monkeypatch):
+    """未安装 wmshare：跳过在线验证只保存，并如实提示。"""
+    monkeypatch.setitem(sys.modules, "wmshare", None)  # import 即 ImportError
+    monkeypatch.setattr(srv.RUNTIME, "demo", True)
+
+    r = srv.key_save({"client_id": "cid", "client_secret": "sec"})
+    assert r["ok"] is True
+    assert credentials.load() == ("cid", "sec")
+    assert srv.RUNTIME.demo is True  # 没有热切换
+
+
+def test_key_clear_back_to_demo(monkeypatch):
+    """真实模式清除库中 Key：回演示模式，取数实例下次按 demo 重建。"""
+    credentials.save("cid", "sec")
+    monkeypatch.setattr(srv.RUNTIME, "demo", False)
+    monkeypatch.setattr(srv.RUNTIME, "_fetcher", object(), raising=False)
+    srv._BIGLY_DATA = object()
+    srv._SCREENER_DATA = object()
+
+    r = srv.key_clear({})
+    assert r["ok"] is True
+    assert srv.RUNTIME.demo is True
+    assert srv.RUNTIME._fetcher is None
+    assert srv._BIGLY_DATA is None
+    assert srv._SCREENER_DATA is None
+    assert credentials.load() is None
+
+
+def test_key_clear_without_saved_key(monkeypatch):
+    """库里没有 Key 时清除：显式报错，不碰 env/文件来源的凭证。"""
+    monkeypatch.setattr(srv.RUNTIME, "demo", False)
+    with pytest.raises(srv.ToolError):
+        srv.key_clear({})
 
 
 def test_xray_result_carries_auth_error(monkeypatch):

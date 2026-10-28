@@ -21,11 +21,16 @@ class WmshareBiglyData:
 
     demo = False
 
-    def __init__(self, client: Any | None = None):
+    def __init__(self, client: Any | None = None,
+                 credentials: tuple[str, str] | None = None):
         if client is None:  # 注入桩客户端时零 wmshare 依赖（离线测试可用）
             import wmshare
 
-            client = wmshare.Client.from_env()
+            if credentials:  # 页面保存进本机数据库的 Key：显式传参
+                client = wmshare.Client(client_id=credentials[0],
+                                        client_secret=credentials[1])
+            else:
+                client = wmshare.Client.from_env()
         self._cli = client
         try:
             self._cli.max_limit = max(self._cli.max_limit or 0, 800)

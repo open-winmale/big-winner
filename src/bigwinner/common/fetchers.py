@@ -11,7 +11,7 @@ from bigwinner.shouxi.tools.dividend_xray import Fetcher
 
 
 def has_own_credentials() -> bool:
-    """本机是否配置了自己的 wmshare 凭证（环境变量或 ~/.wmshare/credentials.env）。
+    """本机是否配置了自己的 wmshare 凭证（页面保存的库 / 环境变量 / 凭证文件）。
 
     只认显式配置——SDK 内置的共享体验 AppID 不算数：工具已下线体验 Key
     路径，无自有凭证时服务应进演示模式而不是悄悄蹭共享池。
@@ -19,6 +19,9 @@ def has_own_credentials() -> bool:
     import os
     from pathlib import Path
 
+    from bigwinner.common import credentials
+    if credentials.has_custom():
+        return True
     cid = os.environ.get("WMSHARE_CLIENT_ID") or os.environ.get("OPEN_PLATFORM_CLIENT_ID")
     if cid and (os.environ.get("WMSHARE_CLIENT_SECRET")
                 or os.environ.get("OPEN_PLATFORM_CLIENT_SECRET")):
@@ -102,7 +105,8 @@ class WmshareFetcher:
     """
 
     def __init__(self, client: Any | None = None,
-                 hk_client: Any | None = None) -> None:
+                 hk_client: Any | None = None,
+                 credentials: tuple[str, str] | None = None) -> None:
         if client is None:
             try:
                 import wmshare  # noqa: PLC0415 - 延迟导入，未安装也能启动服务
@@ -111,7 +115,16 @@ class WmshareFetcher:
                     "未安装 wmshare。请先：git clone https://github.com/open-winmale/wmshare，"
                     "再 pip install -e ./wmshare。"
                 ) from exc
-            client = wmshare.Client.from_env()
+            if credentials:  # 页面保存进本机数据库的 Key：显式传参，不依赖环境变量
+                client = wmshare.Client(client_id=credentials[0],
+                                        client_secret=credentials[1])
+                # HK client 必须同 Key 显式建：懒加载的 from_env(market="hk")
+                # 在只有库凭证（无 env/文件）时会拿不到凭证
+                hk_client = wmshare.Client(client_id=credentials[0],
+                                           client_secret=credentials[1],
+                                           market="hk")
+            else:
+                client = wmshare.Client.from_env()
         self.cli = client
         self._hk_client = hk_client
         self._hk_tried = hk_client is not None

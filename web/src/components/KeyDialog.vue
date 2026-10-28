@@ -17,6 +17,7 @@ const clientId = ref('');
 const secret = ref('');
 const showSecret = ref(false);
 const saving = ref(false);
+const clearing = ref(false);
 const result = ref<{ ok: boolean; text: string } | null>(null);
 
 watch(open, async (v) => {
@@ -25,6 +26,16 @@ watch(open, async (v) => {
   status.value = null;
   try { status.value = await api.keyStatus(); } catch { /* 忽略 */ }
 });
+
+/** 保存/清除后的公共收尾：刷新徽章，演示↔实时切换则整页重建 */
+async function settle(wasDemo: boolean): Promise<void> {
+  await app.refreshKey();
+  try { app.info = await api.appinfo(); } catch { /* 忽略 */ }
+  if (wasDemo !== !!app.info?.demo) {
+    // 模式已切换（演示→实时或实时→演示）：整页刷新，让所有模块按新模式重建
+    setTimeout(() => window.location.reload(), 900);
+  }
+}
 
 async function save(): Promise<void> {
   const cid = clientId.value.trim();
@@ -38,14 +49,8 @@ async function save(): Promise<void> {
   const wasDemo = !!app.info?.demo;
   try {
     const r = await api.keySave({ client_id: cid, client_secret: sec });
-    await app.refreshKey();
-    try { app.info = await api.appinfo(); } catch { /* 忽略 */ }
     result.value = { ok: true, text: r.message };
-    if (wasDemo && app.info && !app.info.demo) {
-      // 演示模式已热切换为实时数据：整页刷新，让所有模块按实时重建
-      setTimeout(() => window.location.reload(), 900);
-      return;
-    }
+    await settle(wasDemo);
   } catch (e) {
     result.value = {
       ok: false,
@@ -53,6 +58,25 @@ async function save(): Promise<void> {
     };
   } finally {
     saving.value = false;
+  }
+}
+
+async function clearKey(): Promise<void> {
+  clearing.value = true;
+  result.value = null;
+  const wasDemo = !!app.info?.demo;
+  try {
+    const r = await api.keyClear();
+    result.value = { ok: true, text: r.message };
+    await settle(wasDemo);
+    status.value = await api.keyStatus();
+  } catch (e) {
+    result.value = {
+      ok: false,
+      text: e instanceof ApiError ? e.message : String(e),
+    };
+  } finally {
+    clearing.value = false;
   }
 }
 </script>
@@ -66,10 +90,10 @@ async function save(): Promise<void> {
       <template v-else>当前没有检测到自己的 Key。填入并验证通过后立即生效（额度独立）。</template>
     </p>
     <p class="muted" style="margin:0 0 10px;font-size:12.5px">
-      到 <a href="https://open.winmale.com" target="_blank" rel="noopener">open.winmale.com</a>
-      微信扫码登录 →「我的」→「开放平台」→「我的应用」→ 复制 client_id 与 api-key。
-      保存后<strong>立即验证并热切换</strong>，无需重启（Key 只存本机
-      ~/.wmshare/credentials.env，权限 600，不会回显）。
+      没有 AppID？到 <a href="https://open.winmale.com" target="_blank"
+        rel="noopener">open.winmale.com</a> 免费申请
+      （微信扫码登录，注册即送额度）。保存后<strong>立即验证并热切换</strong>，
+      无需重启；Key 只存本机工具数据库，不入 git、不回显。
     </p>
     <div style="display:flex;flex-direction:column;gap:8px">
       <input v-model="clientId" placeholder="client_id" autocomplete="off" spellcheck="false">
@@ -85,6 +109,10 @@ async function save(): Promise<void> {
           {{ saving ? '验证中…'
             : (result?.ok ? (status?.demo ? '已保存 ✓' : '已生效 ✓')
               : (status?.custom ? '验证并换 Key' : '验证并保存')) }}
+        </button>
+        <button v-if="status?.custom" class="ghost" :disabled="clearing"
+                @click="clearKey">
+          {{ clearing ? '清除中…' : '清除并回到演示' }}
         </button>
         <span class="muted" style="font-size:12px">免费</span>
       </div>

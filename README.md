@@ -48,8 +48,9 @@ wmshare 本身已放开商用（BSD-3-Clause）；但取数走云端数据服务
 质量体检 / 记账 / 分红日历 / 波段通道与回放 / 全市场策略选股的预烘结果都能看，
 但**不能换持仓、不能取实时**。
 
-任何超出快照的操作都会弹出「本地运行」指引：三行命令启动本地完整版（见下方
-快速开始），页面内填入自己的 AppID 即变实时全市场。
+任何超出快照的操作都会弹出「两步变实时」指引：① 到 open.winmale.com 免费拿
+AppID；② 三行命令本地启动（Windows / macOS / Linux 通用），页面内粘贴 Key 即变
+实时全市场——无需环境变量（见下方快速开始）。
 
 ## 快速开始（开箱即演示，换 Key 变实时）
 
@@ -58,33 +59,53 @@ wmshare 本身已放开商用（BSD-3-Clause）；但取数走云端数据服务
 
 ```bash
 # 启动（零依赖：无需 wmshare、无需凭证）——一条命令，工具总览 + 全部小工具
+# python run.py 在 Windows / macOS / Linux 通用（等价 PYTHONPATH=src python -m bigwinner.shouxi）
 cd big-winner
-PYTHONPATH=src python -m bigwinner.shouxi    # 门户 → http://127.0.0.1:8787
+python run.py    # 门户 → http://127.0.0.1:8787
 ```
 
 **开箱即演示模式**：没有自己的 Key 时自动进入演示——页面是真实数据的历史快照，
 页顶横幅**明示数据截止日期**；示例仅含贵州茅台（600519），其余标的如实显示缺数据
 并引导配 Key。演示不联网、不消耗任何额度，先把工具看明白。想强制演示可加 `--demo`。
 
-**换 Key 即变实时**：到 [open.winmale.com](https://open.winmale.com) 申请 AppID
-（微信扫码登录，注册即送免费额度），然后：
+**换 Key 即变实时**（全程无需环境变量）。真实取数需要安装 wmshare（数据依赖）：
 
 ```bash
-# 真实模式需要安装 wmshare（数据依赖）
 git clone https://github.com/open-winmale/wmshare.git && pip install -e ./wmshare
 ```
 
-页面右上角「数据源 Key」→ 粘贴 client_id 与 api-key → **验证通过立即热切换为
-实时全市场数据，无需重启**（Key 只写本机 `~/.wmshare/credentials.env`，权限 600，
-不会回显）。也可以启动前就配好凭证，服务直接以实时模式启动：
+然后到 [open.winmale.com](https://open.winmale.com) 申请 AppID（微信扫码登录，
+注册即送免费额度），在页面右上角「数据源 Key」粘贴 client_id 与 api-key →
+**验证通过立即热切换为实时全市场数据，无需重启**。Key 只存本机数据库
+`data/fptools.db`（已 gitignore，不入 git、不回显），同一窗口可随时
+「清除并回到演示」。
+
+<details>
+<summary>高级：命令行方式配置凭证（可选，适合无网页的服务器/脚本场景）</summary>
 
 ```bash
+# macOS / Linux
 export WMSHARE_CLIENT_ID=...
 export WMSHARE_CLIENT_SECRET=...
-# 或写入 ~/.wmshare/credentials.env
-PYTHONPATH=src python -m bigwinner.shouxi
+
+# Windows（CMD）
+set WMSHARE_CLIENT_ID=...
+set WMSHARE_CLIENT_SECRET=...
+
+# Windows（PowerShell）
+$env:WMSHARE_CLIENT_ID="..."
+$env:WMSHARE_CLIENT_SECRET="..."
 ```
-> 从旧版本升级：凭证配置名已随上游更名——`FINPIPE_*` 环境变量改为 `WMSHARE_*`，`~/.finpipe/credentials.env` 改为 `~/.wmshare/credentials.env`，已配置的用户请迁移。
+
+或写入凭证文件 `~/.wmshare/credentials.env`（Windows 为
+`C:\Users\你\.wmshare\credentials.env`）。读取优先级：页面保存的数据库 >
+环境变量 > 凭证文件。凭证内容不要提交到任何 git 仓库；也不要直接分享存了
+Key 的 `data/fptools.db`（里面还有你的快照数据，分享前先在页面「清除 Key」）。
+
+> 从旧版本升级：凭证配置名已随上游更名——`FINPIPE_*` 环境变量改为 `WMSHARE_*`，
+> `~/.finpipe/credentials.env` 改为 `~/.wmshare/credentials.env`，已配置的用户请迁移；
+> 旧版页面保存到 `~/.wmshare/credentials.env` 的 Key 依然有效（自动回退读取）。
+</details>
 
 > `python -m bigwinner.server` 为兼容别名，等价于收息佬入口（即门户）。
 > 波段也可独立启动（互不影响）：`PYTHONPATH=src python -m bigwinner.bigly`

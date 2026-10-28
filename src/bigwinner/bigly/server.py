@@ -18,6 +18,7 @@ from bigwinner.bigly import channel as ch_mod
 from bigwinner.bigly import levels as lv_mod
 from bigwinner.bigly import suggest as sg_mod
 from bigwinner.bigly.fetchers import DemoBiglyData, WmshareBiglyData
+from bigwinner.common import credentials
 from bigwinner.common.fetchers import has_own_credentials
 from bigwinner.common.symbols import SymbolDirectory
 
@@ -154,7 +155,10 @@ def run_backtest(data, payload: dict) -> dict:
 
 
 def build_data(demo: bool):
-    return DemoBiglyData() if demo else WmshareBiglyData()
+    if demo:
+        return DemoBiglyData()
+    # 凭证优先取页面保存进本机数据库的 Key；env/文件由 SDK 兜底
+    return WmshareBiglyData(credentials=credentials.load())
 
 
 def make_handler(data, directory: SymbolDirectory | None = None):  # noqa: C901 - 单文件服务的路由集中处
