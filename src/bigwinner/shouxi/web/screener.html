@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>筛选 · 收息佬</title>
+<title>选股 · 收息佬</title>
 <link rel="stylesheet" href="/assets/base.css">
 <style>
   .banner{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;
@@ -60,21 +60,13 @@
   .toast{font-size:12.5px;color:var(--text-2);margin-top:8px;min-height:16px}
   .toast.bad{color:#dc2626}
   .foot-note{color:#64748b;font-size:12.5px;margin-top:16px;line-height:1.7}
-  #trial-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99;
-    display:flex;align-items:center;justify-content:center}
-  #trial-mask .box{background:#fff;border-radius:12px;max-width:420px;margin:16px;
-    padding:22px 24px;box-shadow:var(--shadow);font-size:14px;line-height:1.7}
-  #trial-mask .btns{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
-  #trial-mask button{padding:7px 16px;border-radius:8px;font-size:13.5px;cursor:pointer;
-    border:1px solid var(--line-strong);background:#fff}
-  #trial-mask button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 </style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="topbar-inner">
-    <span class="brand">筛选 <span class="dot">·</span> screener</span>
+    <span class="brand">选股 <span class="dot">·</span> screener</span>
     <span class="spacer"></span>
     <span class="meta" id="demo-badge"></span>
     <span class="meta" id="key-badge"></span>
@@ -87,7 +79,7 @@
     <b>选股 ≠ 推荐</b>，买卖决策由你自己负责。</div>
 
   <div class="page-head">
-    <h1>筛选 <span style="font-size:15px;color:#64748b">screener</span></h1>
+    <h1>选股 <span style="font-size:15px;color:#64748b">screener</span></h1>
     <p>预置策略 · 一键全市场 —— 格雷厄姆、高股息等策略一句话讲清口径，
        选股清单的数字就是入选证据。</p>
   </div>
@@ -134,7 +126,7 @@
   </section>
 
   <div class="footer">
-    <div>数据来自平台选股引擎与 finpipe；历史筛选结果不代表未来；最终以上市公司公告为准。</div>
+    <div>数据来自平台选股引擎与 finpipe；历史选股结果不代表未来；最终以上市公司公告为准。</div>
   </div>
 </main>
 
@@ -324,7 +316,7 @@ function render(data) {
   });
   var pushBtn = $("push");
   if (pushBtn) pushBtn.addEventListener("click", function () {
-    pushWatchlist(meta.name || "筛选", codes);
+    pushWatchlist(meta.name || "选股", codes);
   });
 }
 
@@ -347,7 +339,7 @@ function pushWatchlist(strategyName, codes) {
   toast.textContent = "推送中…";
   fetch("/api/watchlist-push", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group: "筛选·" + strategyName,
+    body: JSON.stringify({ group: "选股·" + strategyName,
                            positions: codes.map(function (c) { return { code: c }; }) }),
   }).then(function (r) { return r.json(); }).then(function (data) {
     if (data.error) {
@@ -378,29 +370,12 @@ restore();
 renderCards();
 updateQuota();
 
-// ---- demo 徽章 + 体验 Key 提示（每会话一次）----
+// ---- demo 徽章 ----
 fetch("/api/appinfo").then(function (r) { return r.json(); }).then(function (info) {
   if (info.demo) {
     $("demo-badge").textContent = "演示数据";
   } else {
-    $("key-badge").textContent = info.trial ? "" : "finpipe 实时数据";
-    if (!info.trial || sessionStorage.getItem("trialKeyHintDismissed")) return;
-    var mask = document.createElement("div");
-    mask.id = "trial-mask";
-    mask.innerHTML = "<div class='box'><b>你正在使用内置体验 Key</b><br>"
-      + "体验额度是共享池，容易限流。配置自己的 AppID 后额度独立、不再提示。"
-      + "<div class='btns'><button id='trial-later'>暂不</button>"
-      + "<button id='trial-go' class='primary'>去配置 →</button></div></div>";
-    document.body.appendChild(mask);
-    mask.addEventListener("click", function (e) {
-      if (e.target.id === "trial-later" || e.target === mask) {
-        try { sessionStorage.setItem("trialKeyHintDismissed", "1"); } catch (err) { }
-        mask.remove();
-      } else if (e.target.id === "trial-go") {
-        try { sessionStorage.setItem("trialKeyHintDismissed", "1"); } catch (err) { }
-        location.href = "/setup.html";
-      }
-    });
+    $("key-badge").textContent = "finpipe 实时数据";
   }
 }).catch(function () { /* 就绪前忽略 */ });
 </script>

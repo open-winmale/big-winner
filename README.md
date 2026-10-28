@@ -1,12 +1,13 @@
-# big-winner（收息佬 · 波段 · 筛选）
+# big-winner（收息佬 · 波段 · 选股）
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](pyproject.toml)
 [![Tests](https://github.com/open-winmale/big-winner/actions/workflows/ci.yml/badge.svg)](https://github.com/open-winmale/big-winner/actions/workflows/ci.yml)
 
 > A 股 / 港股持仓收息、分红日历与记账（**收息佬**）· 估值买卖点区间参考（**波段**）·
-> 条件选股过筛（**筛选**）。
-> **v1.5.0** · [GitHub](https://github.com/open-winmale/big-winner) · 数据来自
+> 条件选股（**选股**）。
+> **v1.6.0** · [GitHub](https://github.com/open-winmale/big-winner) ·
+> [在线体验（只读演示）](https://open-winmale.github.io/big-winner/) · 数据来自
 > [finpipe](https://github.com/open-winmale/finpipe)，只做事实与统计聚合；
 > 工具代码 MIT；数据来自 finpipe（非商业许可，商业使用需另行授权，见「许可与合规」）。
 
@@ -14,14 +15,15 @@
 |---|---|
 | ![收息佬：持仓透视表与派息稳定性看板](src/bigwinner/shouxi/web/assets/shot-dividend-xray.png) | ![波段：估值通道与安全边界](src/bigwinner/shouxi/web/assets/shot-bigly.png) |
 
-*图为内置 demo 数据截图（合成样例，非真实持仓）。一条命令启动后，浏览器打开
+*图为收息佬与波段页面截图。一条命令启动后，浏览器打开
 `http://127.0.0.1:8787/` 即可在总览页直接进入三个工具体验。
 
 ## 目录
 
-[许可与合规](#许可与合规请先读) · [快速开始](#快速开始一条命令门户页直达两个工具) ·
+[许可与合规](#许可与合规请先读) · [在线体验](#在线体验只读演示数据截止快照日) ·
+[快速开始](#快速开始开箱即演示换-key-变实时) ·
 [工具一览](#工具一览) · [波段 · 区间与安全边界](#波段--区间与安全边界说明) ·
-[筛选 · 选股策略](#筛选--选股策略) ·
+[选股 · 策略与口径](#选股--策略与口径) ·
 [收息佬 · 方法论](#收息佬--方法论) · [设计原则](#设计原则) · [项目结构](#项目结构) ·
 [测试](#测试) · [免责声明](#免责声明)
 
@@ -39,42 +41,50 @@
 **本工具不提供、也永远不会提供任何买卖时点、目标价或仓位建议。**
 输出全部为描述性统计，不代表投资建议；数据最终以上市公司公告为准。
 
-## 快速开始（一条命令，门户页直达两个工具）
+## 在线体验（只读演示，数据截止快照日）
+
+打开 **<https://open-winmale.github.io/big-winner/>** 即可浏览：里面是真实数据的
+历史快照（页顶横幅**明示数据截止日期**，示例持仓为贵州茅台 600519）——收息透视 /
+质量体检 / 记账 / 分红日历 / 波段通道与回放 / 全市场策略选股的预烘结果都能看，
+但**不能换持仓、不能取实时**。
+
+任何超出快照的操作都会弹出「本地运行」指引：三行命令启动本地完整版（见下方
+快速开始），页面内填入自己的 AppID 即变实时全市场。
+
+## 快速开始（开箱即演示，换 Key 变实时）
 
 ```bash
-# 1) 安装 finpipe（数据依赖）
-git clone https://github.com/open-winmale/finpipe.git && pip install -e ./finpipe
-
-# 2) 启动（单端口，零依赖）：一条命令，工具总览 + 全部小工具
+# 启动（零依赖：无需 finpipe、无需凭证）——一条命令，工具总览 + 全部小工具
 cd big-winner
 PYTHONPATH=src python -m bigwinner.shouxi    # 门户 → http://127.0.0.1:8787
 ```
 
-打开 `http://127.0.0.1:8787/` 即工具总览页，收息佬、波段与筛选都在其中；
-波段也可独立启动（互不影响）：
+**开箱即演示模式**：没有自己的 Key 时自动进入演示——页面是真实数据的历史快照，
+页顶横幅**明示数据截止日期**；示例仅含贵州茅台（600519），其余标的如实显示缺数据
+并引导配 Key。演示不联网、不消耗任何额度，先把工具看明白。想强制演示可加 `--demo`。
+
+**换 Key 即变实时**：到 [open.winmale.com](https://open.winmale.com) 申请 AppID
+（微信扫码登录，注册即送免费额度），然后：
 
 ```bash
-PYTHONPATH=src python -m bigwinner.bigly     # 波段 → http://127.0.0.1:8788
+# 真实模式需要安装 finpipe（数据依赖）
+git clone https://github.com/open-winmale/finpipe.git && pip install -e ./finpipe
 ```
 
-**没有凭证也能先看效果**（内置样例数据，不联网）：
-
-```bash
-PYTHONPATH=src python -m bigwinner.shouxi --demo
-```
-
-> `python -m bigwinner.server` 为兼容别名，等价于收息佬入口（即门户）。
-
-配置自己的 AppID（内置体验额度是共享池，容易 429）：
+页面右上角「数据源 Key」→ 粘贴 client_id 与 api-key → **验证通过立即热切换为
+实时全市场数据，无需重启**（Key 只写本机 `~/.finpipe/credentials.env`，权限 600，
+不会回显）。也可以启动前就配好凭证，服务直接以实时模式启动：
 
 ```bash
 export FINPIPE_CLIENT_ID=...
 export FINPIPE_CLIENT_SECRET=...
 # 或写入 ~/.finpipe/credentials.env
+PYTHONPATH=src python -m bigwinner.shouxi
 ```
 
-> 页面检测到当前在用内置体验 Key 时会**主动弹窗提醒**（每个新会话一次，「暂不」后
-> 本会话内不再弹）；换成自己的 Key 后永久消失。demo 模式不消耗 Key、不提示。
+> `python -m bigwinner.server` 为兼容别名，等价于收息佬入口（即门户）。
+> 波段也可独立启动（互不影响）：`PYTHONPATH=src python -m bigwinner.bigly`
+> → http://127.0.0.1:8788 ，无凭证同样自动进演示模式。
 
 ## 工具一览
 
@@ -82,7 +92,7 @@ export FINPIPE_CLIENT_SECRET=...
 |---|---|---|
 | [波段](/tools/bigly/)（门户直达；独立启动 :8788） | ✅ 可用 | 估值买卖点区间参考 + 拨测回看：PE/PB 均值±Nσ 通道（与平台 web「估值通道」同源）、**区间设置 = 推荐区间（默认，四条约束自动搜点，含成交次数）+ 自定义区间**（自填目标 PE/PB）、安全边界（高位介入回撤统计 + 止损参考）、**区间分布与极值**（估值/股价三区分布、距极值溢出）、多轮进出历史回放与「波段 vs 长持」收益对比；窗口半年~3 年，默认半年，进页自动加载。总览页直达；也可独立启动 :8788 |
 | [收息佬](/tools/dividend-xray/) | ✅ 可用 | 攒股收息驾驶舱：分红日历、每票持续性分析、A/HK 持仓透视（总市值/总利润/股息率/成本股息率）+ 派息稳定性看板 |
-| [筛选](/tools/screener/) | ✅ 可用 | 预置策略 · 一键全市场选股：格雷厄姆（简化）、高股息、破净、派息健康等策略一句话讲清口径，清单数字即入选证据，一键加入观察池跟踪。选股结果 ≠ 推荐（详见[选股策略](#筛选--选股策略)） |
+| [选股](/tools/screener/) | ✅ 可用 | 预置策略 · 一键全市场选股：格雷厄姆（简化）、高股息、破净、派息健康等策略一句话讲清口径，清单数字即入选证据，一键加入观察池跟踪。选股结果 ≠ 推荐（详见[选股 · 策略与口径](#选股--策略与口径)） |
 | 收息驾驶舱（透视表顶部） | ✅ 可用 | 自动载入最近持仓 → 未来 7/30/90/365 天除权与到账、税后现金、年息目标进度 |
 | 分红记账（透视表内） | ✅ 可用 | 按除权历史算税前/税后股息；A 股按持有时长分档，港股默认 20%，支持单票/年度/统一税率覆盖 |
 | 分红质量（透视表内） | ✅ 可用 | 经营现金流/FCF 对股息覆盖 + 分红率 3/5 年 + 连续性/意愿双轴；只评 A 股非金融，金融股/港股显式标注不评分 |
@@ -147,7 +157,7 @@ T+1 买入当日不卖；**止盈/止损出场后资金回笼，卖出次日可�
 **免责声明**：波段全部输出为统计描述与历史回放，不构成任何投资建议；买卖点由
 你自己设定与负责。免责在页面顶部横幅、页脚与结果区三处显著呈现。
 
-## 筛选 · 选股策略
+## 选股 · 策略与口径
 
 **预置策略 · 一键全市场**：选一张策略卡，对全市场执行，直接输出带数字的选股
 清单——数字就是入选证据；可一键把结果加入平台观察分组，接续收息佬的分红日历
@@ -278,21 +288,43 @@ src/bigwinner/
   common/                # store（SQLite 持仓档案）/ fetchers（CN/HK 双 client）/
                          # symbols（离线代码目录）/ export（CSV）/ watchlist_sync
 docs/                   # 设计草稿（screener UI/UX 等）
-tests/                  # 21 个文件 / 180 个离线用例
+tests/                  # 22 个文件 / 189 个离线用例
+web/                    # 网页版前端（Vue3 + Vite + TS，见下节）
 ```
 
 新增收息侧小工具：加 `shouxi/tools/<name>.py` → 在收息佬 `server.py` 的 `TOOLS` 与
-`HANDLERS` 各注册一条 → 加一个 `web/<name>.html`。
+`HANDLERS` 各注册一条 → 加一个 `web/<name>.html`（或网页版 `web/src/features/` 下加一个页面）。
+
+## 网页版前端（web/）
+
+三个工具的界面正在迁移为 Vue3 单页应用（sift 同栈：Vite + TypeScript + Pinia +
+UnoCSS + ECharts），后端 API 与 17 个计算接口**原样复用**，仍是单端口单进程：
+`python -m bigwinner.shouxi` 同时托管 API 与构建好的 SPA。
+
+```bash
+cd web
+npm install
+npm run dev        # http://localhost:5173，/api 与 /export 自动代理到 127.0.0.1:8787
+                   # 连别的后端：BIGWINNER_BACKEND=http://127.0.0.1:8795 npm run dev
+npm run build      # 产物输出到 src/bigwinner/shouxi/web_dist/（gitignore）
+npm test           # vitest 单测；npm run typecheck
+```
+
+构建一次后，后端自动切换到网页版：`/` 出 SPA，旧链接 `/tools/dividend-xray/`、
+`/setup.html` 302 到对应 hash 路由（`/#/shouxi`、`/#/setup`），`/api/*` 与
+`/export/*` 不受影响；删掉 `web_dist/` 即回退旧多页界面。开发时改前端保存即热更新，
+无需重启后端；后端契约由 pytest 钉死，前端展示层由 vitest 覆盖。
 
 ## 测试
 
 ```bash
 python -m pytest tests -q     # 离线，不需要凭证（CI 每次 push 自动跑）
+cd web && npm test            # 前端单测（CI web job 同跑 typecheck + build）
 ```
 
-21 个文件、180 个用例，覆盖：收息侧加权口径、缺失不污染汇总、税档与覆盖优先级、
+22 个文件、189 个用例，覆盖：收息侧加权口径、缺失不污染汇总、税档与覆盖优先级、
 港股双市场路由、HKD/CNY 折算、分红日历事件解析/税后现金/年息目标、最近持仓自动载入、
-分红质量评分与硬旗标；筛选策略注册表、自定义组合编条件、通道解析与不可用降级、
+分红质量评分与硬旗标；选股策略注册表、自定义组合编条件、通道解析与不可用降级、
 罐头条件语义与确定性；波段侧估值通道数值对齐、四条约束与放宽标注、多轮回放、
 无解回退、单端口门户。
 

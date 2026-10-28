@@ -36,6 +36,16 @@ from bigwinner.shouxi.tools import ledger as ledger_mod
 from bigwinner.shouxi.tools import screener as scr
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
+#: 网页版 SPA（web/ 前端 `npm run build` 的产物）。存在时优先托管：
+#: hash 路由只有 / 一个入口，旧 /tools/<slug>/ 链接 302 到对应 hash 页面。
+WEB_DIST = WEB_DIR.parent / "web_dist"
+
+#: 旧多页路由 → SPA hash 路由（推广帖里的旧链接保持可用）
+_SPA_REDIRECTS = {
+    "dividend-xray": "shouxi",
+    "bigly": "bigly",
+    "screener": "screener",
+}
 
 #: 工具注册表：新增工具只需在这里加一条 + 一个 HTML + 一个 handler；
 #: 页面不在本包 web/ 下时，用 web_dir 指到别处（如波段）
@@ -52,7 +62,7 @@ TOOLS: dict[str, dict[str, str]] = {
         "web_dir": str(bigly_srv.WEB_DIR),
     },
     "screener": {
-        "title": "筛选",
+        "title": "选股",
         "tagline": "预置策略 · 一键全市场 —— 格雷厄姆、高股息，条件与数字都摆给你看",
         "page": "screener.html",
     },
@@ -138,162 +148,103 @@ def screener_data() -> Any:
     return _SCREENER_DATA
 
 
+_DEMO_SNAPSHOT: dict[str, Any] | None = None
+
+
+def _demo_snapshot() -> dict[str, Any] | None:
+    """真实数据静态快照（scripts/bake_demo_data.py 生成），懒加载一次。"""
+    global _DEMO_SNAPSHOT
+    if _DEMO_SNAPSHOT is None:
+        path = Path(__file__).resolve().parent / "demo_data.json"
+        if path.exists():
+            try:
+                _DEMO_SNAPSHOT = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001 - 快照损坏则退回内置样例
+                _DEMO_SNAPSHOT = {}
+    return _DEMO_SNAPSHOT or None
+
+
 def _demo_data() -> dict[str, Any]:
-    """demo 模式的样例数据（口径与真实一致：比率小数、金额元）。
+    """demo 模式数据：真实数据的静态快照（非实时）。
 
-    20 只主流蓝筹，数值为 2026-10 量级的近似编排值——够演示交互与看板，
-    不代表真实行情（页面右上角有 DEMO 徽章）。其他票如实缺失。
+    价格 / 股息率 / 分红史都是生成当日真实接口返回——演示要经得起看，
+    只是时间冻结在快照日。配置 finpipe Key 即变实时：演示模式下
+    「验证并换 Key」通过后会直接热切换，无需重启（见 key_save）。
+    快照文件缺失时退回内置最小样例，保证 --demo 永远能起。
     """
-    codes = ["600900", "601088", "600519", "601398", "000858",
-             "600036", "601318", "000651", "600887", "601899",
-             "600489", "000333", "600276", "601888", "000001",
-             "601166", "600028", "601728", "600941", "601668"]
+    snap = _demo_snapshot()
+    if snap and snap.get("tables"):
+        return snap["tables"]
+    return _demo_data_fallback()
 
-    prices = {
-        "600900": 28.10, "601088": 41.20, "600519": 1420.0, "601398": 6.85,
-        "000858": 118.40, "600036": 45.60, "601318": 52.30, "000651": 41.80,
-        "600887": 27.50, "601899": 21.40, "600489": 13.20, "000333": 74.20,
-        "600276": 46.90, "601888": 61.50, "000001": 11.60, "601166": 22.10,
-        "600028": 6.20, "601728": 7.40, "600941": 108.50, "601668": 5.90,
-        "hk.00700": 382.40,
-    }
-    yields = {
-        "600900": 0.0338, "601088": 0.0521, "600519": 0.0396, "601398": 0.0512,
-        "000858": 0.0461, "600036": 0.0482, "601318": 0.0345, "000651": 0.0564,
-        "600887": 0.0412, "601899": 0.0321, "600489": 0.0448, "000333": 0.0487,
-        "600276": 0.0298, "601888": 0.0215, "000001": 0.0532, "601166": 0.0495,
-        "600028": 0.0552, "601728": 0.0428, "600941": 0.0465, "601668": 0.0488,
-        "hk.00700": 0.01373,
-    }
-    payouts = {
-        "600900": 0.710, "601088": 0.728, "600519": 0.799, "601398": 0.310,
-        "000858": 0.650, "600036": 0.352, "601318": 0.285, "000651": 0.722,
-        "600887": 0.705, "601899": 0.446, "600489": 0.630, "000333": 0.445,
-        "600276": 0.510, "601888": 0.518, "000001": 0.285, "601166": 0.310,
-        "600028": 0.680, "601728": 0.435, "600941": 0.730, "601668": 0.288,
-        "hk.00700": 0.2052,
-    }
-    dps = {
-        "600900": 0.95, "601088": 2.15, "600519": 56.2, "601398": 0.35,
-        "000858": 5.46, "600036": 2.20, "601318": 1.80, "000651": 2.36,
-        "600887": 1.13, "601899": 0.69, "600489": 0.59, "000333": 3.50,
-        "600276": 1.40, "601888": 1.32, "000001": 0.62, "601166": 1.09,
-        "600028": 0.34, "601728": 0.32, "600941": 5.05, "601668": 0.29,
-        "hk.00700": 5.30,
-    }
-    eps = {
-        "600900": 1.32, "601088": 2.95, "600519": 70.3, "601398": 1.05,
-        "000858": 8.40, "600036": 5.85, "601318": 5.90, "000651": 3.10,
-        "600887": 1.62, "601899": 1.50, "600489": 0.89, "000333": 7.60,
-        "600276": 2.72, "601888": 2.42, "000001": 2.15, "601166": 3.45,
-        "600028": 0.50, "601728": 0.72, "600941": 6.85, "601668": 1.00,
-    }
 
-    def _demo_quality(code: str) -> dict[str, Any]:
-        """demo 质量指标：与 payouts/eps 同口径，金融股模拟 FCF 缺失。"""
-        payout = payouts.get(code) or 0.5
-        eps_ttm = eps.get(code) or 1.0
-        financial = code in ("601398", "601318", "601166", "000001")
-        npts = eps_ttm * 1.0e9
-        ncfo = npts * (1.05 if not financial else 1.6)
-        fcf = None if financial else ncfo * 0.8
-        series = [{"year": y, "value": round(payout * (1 + (2025 - y) * 0.02), 4)}
-                  for y in range(2025, 2019, -1)]
-        return {
-            "payout_ttm": payout, "payout_lyr": payout,
-            "payout_3y_avg": round(payout * 0.97, 4),
-            "payout_5y_avg": round(payout * 0.94, 4),
-            "payout_3y_min": round(payout * 0.9, 4),
-            "payout_5y_min": round(payout * 0.85, 4),
-            "payout_trend": "flat",
-            "yield_ttm": yields.get(code),
-            "ncfo_ttm": ncfo, "fcf_ttm": fcf,
-            "cf_np": 1.05, "ncfo_3y_min": ncfo * 0.9, "cfo_kind": 1,
-            "npts_ttm": npts, "npts_yoy": 0.06,
-            "roe": 0.12, "roic": 0.10,
-            "tl_rate": 0.92 if financial else 0.35,
-            "ibd_rate": 0.0 if financial else 0.13,
-            "quick": None if financial else 1.2,
-            "ld": None if financial else 1.5,
-            "setl": None if financial else -(npts * 0.3),
-            "org_type": 2 if financial else 1,
-            "org_form": ("中央金融企业" if financial
-                         else ("大型民企" if code in ("000858", "000651")
-                               else "地方国有企业")),
-            "free_holder_sum": 0.48, "exec_hold": 0.008,
-            "has_buyback": code in ("600519", "000333"),
-            "ind_tl_3y_avg": 0.44, "ind_roe_3y_avg": 0.10,
-            "ind_yield_3y_avg": 0.035,
-            "payout_lyr_series": series,
-            "bonus_series": [{"year": s["year"], "value": npts * s["value"]}
-                             for s in series],
-            "yield_series": [{"year": s["year"],
-                              "value": (yields.get(code) or 0.03) * (1 + (2025 - s["year"]) * 0.02)}
-                             for s in series],
-        }
+def _demo_data_fallback() -> dict[str, Any]:
+    """内置兜底样例（快照 JSON 缺失/损坏时才用到）。
 
-    quality = {c: _demo_quality(c) for c in codes}
-
-    names = {
-        "600900": "长江电力", "601088": "中国神华", "600519": "贵州茅台",
-        "601398": "工商银行", "000858": "五粮液", "600036": "招商银行",
-        "601318": "中国平安", "000651": "格力电器", "600887": "伊利股份",
-        "601899": "紫金矿业", "600489": "中金黄金", "000333": "美的集团",
-        "600276": "恒瑞医药", "601888": "中国中免", "000001": "平安银行",
-        "601166": "兴业银行", "600028": "中国石化", "601728": "中国电信",
-        "600941": "中国移动", "601668": "中国建筑", "hk.00700": "腾讯控股",
+    与正式快照同口径：只覆盖贵州茅台一只示例。演示看门面足够，
+    其余标的如实缺数据并引导换 Key——绝不合成别的股票假价格。
+    """
+    code = "600519"
+    payout = 0.799
+    eps = 70.3
+    npts = eps * 1.2e9
+    ncfo = npts * 1.05
+    series = [{"year": y, "value": round(payout * (1 + (2025 - y) * 0.02), 4)}
+              for y in range(2025, 2019, -1)]
+    quality = {
+        "payout_ttm": payout, "payout_lyr": payout,
+        "payout_3y_avg": round(payout * 0.97, 4),
+        "payout_5y_avg": round(payout * 0.94, 4),
+        "payout_3y_min": round(payout * 0.9, 4),
+        "payout_5y_min": round(payout * 0.85, 4),
+        "payout_trend": "flat",
+        "yield_ttm": 0.0396,
+        "ncfo_ttm": ncfo, "fcf_ttm": ncfo * 0.8,
+        "cf_np": 1.05, "ncfo_3y_min": ncfo * 0.9, "cfo_kind": 1,
+        "npts_ttm": npts, "npts_yoy": 0.06,
+        "roe": 0.12, "roic": 0.10,
+        "tl_rate": 0.35,
+        "ibd_rate": 0.13,
+        "quick": 1.2,
+        "ld": 1.5,
+        "setl": -(npts * 0.3),
+        "org_type": 1,
+        "org_form": "地方国有企业",
+        "free_holder_sum": 0.48, "exec_hold": 0.008,
+        "has_buyback": True,
+        "ind_tl_3y_avg": 0.44, "ind_roe_3y_avg": 0.10,
+        "ind_yield_3y_avg": 0.035,
+        "payout_lyr_series": series,
+        "bonus_series": [{"year": s["year"], "value": npts * s["value"]}
+                         for s in series],
+        "yield_series": [{"year": s["year"],
+                          "value": 0.0396 * (1 + (2025 - s["year"]) * 0.02)}
+                         for s in series],
     }
-
     return {
-        "prices": prices,
-        "yields": yields,
-        "payouts": payouts,
-        "dps": dps,
-        "eps": {**eps, "hk.00700": 25.902},
-        "quality": quality,
-        "names": names,
-        "pct10y": {
-            "600900": 0.42, "601088": 0.61, "600519": 0.28, "601398": 0.77,
-            "000858": 0.55, "600036": 0.72, "601318": 0.38, "000651": 0.83,
-            "600887": 0.49, "601899": 0.33, "600489": 0.58, "000333": 0.66,
-            "600276": 0.22, "601888": 0.15, "000001": 0.74, "601166": 0.69,
-            "600028": 0.80, "601728": 0.52, "600941": 0.64, "601668": 0.71,
-            "hk.00700": 1.0,
-        },
+        "prices": {code: 1420.0},
+        "yields": {code: 0.0396},
+        "payouts": {code: payout},
+        "dps": {code: 56.2},
+        "eps": {code: eps},
+        "pct10y": {code: 0.28},
+        "quality": {code: quality},
+        "names": {code: "贵州茅台"},
         "history": {
-            **{
-                c: [
-                    # 2026 已实施（今年已收）
-                    {"sas": "2025-12-31", "ex_date": "2026-07-15",
-                     "record_date": "2026-07-14", "pay": "2026-07-30",
-                     "dps": 0.9, "status": "实施", "kind": "年度",
-                     "content": "10派9元(含税)"},
-                    # 2026 中期预案（未来 30 天内除权，演示日历）
-                    {"sas": "2026-06-30", "ex_date": "2026-11-15",
-                     "record_date": "2026-11-14", "pay": "2026-11-30",
-                     "dps": 0.95, "status": "预案", "kind": "中期",
-                     "content": "10派9.5元(含税)"},
-                    *[
-                        {"sas": f"{y}-06-30", "ex_date": f"{y}-07-15", "dps": 0.9}
-                        for y in range(2025, 2019, -1)
-                    ],
-                ]
-                for c in codes
-            },
-            # 港股：2026 已派 + 2026 中期预案，演示 HK 通道/币种/日历
-            "hk.00700": [
-                {"sas": "2025-12-31", "ex_date": "2026-05-20",
-                 "record_date": "2026-05-19", "pay": "2026-06-05",
-                 "dps": 5.30, "status": "实施", "kind": "年度",
-                 "content": "派发年度股息"},
-                {"sas": "2026-06-30", "ex_date": "2026-11-20",
-                 "record_date": "2026-11-19", "pay": "2026-12-05",
-                 "dps": 5.30, "status": "预案", "kind": "中期",
-                 "content": "派发中期股息"},
+            code: [
+                # 2026 已实施（今年已收）
+                {"sas": "2025-12-31", "ex_date": "2026-07-15",
+                 "record_date": "2026-07-14", "pay": "2026-07-30",
+                 "dps": 56.0, "status": "实施", "kind": "年度",
+                 "content": "10派56元(含税)"},
+                # 2026 中期预案（未来 30 天内除权，演示日历）
+                {"sas": "2026-06-30", "ex_date": "2026-11-15",
+                 "record_date": "2026-11-14", "pay": "2026-11-30",
+                 "dps": 59.5, "status": "预案", "kind": "中期",
+                 "content": "10派59.5元(含税)"},
                 *[
-                    {"sas": f"{y}-12-31", "ex_date": f"{y + 1}-05-20",
-                     "dps": 5.30}
-                    for y in range(2024, 2019, -1)
+                    {"sas": f"{y}-06-30", "ex_date": f"{y}-07-15", "dps": 47.0}
+                    for y in range(2025, 2019, -1)
                 ],
             ],
         },
@@ -523,6 +474,10 @@ def run_calendar(payload: dict[str, Any]) -> dict[str, Any]:
             fn = getattr(fetcher, "high_yield_symbols", None)
             pool = fn(market, pool_limit) if fn is not None else []
         if not pool:
+            if RUNTIME.demo:
+                raise ToolError(
+                    "演示快照只覆盖示例标的，高股息池需要实时数据——"
+                    "配置自己的 Key 即可查看全市场。")
             detail = f"（{screener_error}）" if screener_error else ""
             raise ToolError(
                 "高股息池没有取到数据（选股/指数接口可能不可用或额度不足）"
@@ -828,25 +783,59 @@ def key_status(_: dict[str, Any]) -> dict[str, Any]:
     return {"custom": custom, "demo": RUNTIME.demo}
 
 
-def key_save(payload: dict[str, Any]) -> dict[str, Any]:
-    """页面直接保存 Key：写 ~/.finpipe/credentials.env + 热切换验证。
-
-    安全：响应不回显 Key；写文件权限 600；失败不落地。
-    """
-    cid = str(payload.get("client_id") or "").strip()
-    sec = str(payload.get("client_secret") or "").strip()
-    if not cid or not sec:
-        raise ToolError("client_id 与 client_secret 都必填")
-    ok = RUNTIME.rekey(cid, sec)
-    if not ok:
-        raise ToolError("Key 验证失败：请检查是否复制完整（client_id + api-key）。"
-                        "旧 Key 未受影响，工具仍用原凭证。")
+def _write_credentials(cid: str, sec: str) -> None:
+    """Key 落盘 ~/.finpipe/credentials.env（权限 600，不回显）。"""
     cred = Path.home() / ".finpipe" / "credentials.env"
     cred.parent.mkdir(parents=True, exist_ok=True)
     cred.write_text(
         f"FINPIPE_CLIENT_ID={cid}\nFINPIPE_CLIENT_SECRET={sec}\n",
         encoding="utf-8")
     cred.chmod(0o600)
+
+
+def key_save(payload: dict[str, Any]) -> dict[str, Any]:
+    """页面直接保存 Key：写 ~/.finpipe/credentials.env + 验证。
+
+    真实模式：验证通过立即热切换，缓存作废。
+    演示模式：验证通过后直接热切换为实时取数（finpipe 可用即可），无需重启；
+    未安装 finpipe 时只落盘并如实提示。换 Key 的入口任何模式下都可用。
+    安全：响应不回显 Key；写文件权限 600；验证失败不落地。
+    """
+    global _BIGLY_DATA, _SCREENER_DATA
+    cid = str(payload.get("client_id") or "").strip()
+    sec = str(payload.get("client_secret") or "").strip()
+    if not cid or not sec:
+        raise ToolError("client_id 与 client_secret 都必填")
+
+    if RUNTIME.demo:
+        try:
+            import finpipe  # noqa: PLC0415
+        except ImportError:
+            _write_credentials(cid, sec)
+            return {"ok": True, "message": "Key 已保存（本机未安装 finpipe，"
+                    "跳过在线验证）~/.finpipe/credentials.env。安装 finpipe 后"
+                    "重启真实模式即生效。"}
+        try:
+            probe = finpipe.Client(client_id=cid, client_secret=sec)
+            probe.call("kline.query_bars", sym="600036", limit=1)  # 真实验证
+        except Exception:  # noqa: BLE001 - 凭证错/网络错都不落地
+            raise ToolError("Key 验证失败：请检查是否复制完整（client_id + "
+                            "api-key）。旧文件未受影响。") from None
+        _write_credentials(cid, sec)
+        # 热切换：复用刚验证过的 client 转实时取数，波段/筛选取数实例也重建
+        RUNTIME._fetcher = fetchers.CachedFetcher(
+            fetchers.FinpipeFetcher(client=probe))
+        RUNTIME.demo = False
+        _BIGLY_DATA = None
+        _SCREENER_DATA = None
+        return {"ok": True, "message": "Key 已验证并生效：已切换为实时数据，"
+                "无需重启。"}
+
+    ok = RUNTIME.rekey(cid, sec)
+    if not ok:
+        raise ToolError("Key 验证失败：请检查是否复制完整（client_id + api-key）。"
+                        "旧 Key 未受影响，工具仍用原凭证。")
+    _write_credentials(cid, sec)
     return {"ok": True, "message": "Key 已验证并保存（~/.finpipe/credentials.env），"
                                    "额度从此独立。缓存已清空，立即生效。"}
 
@@ -905,6 +894,25 @@ class Handler(BaseHTTPRequestHandler):
     # ---- GET ----
     def do_GET(self) -> None:  # noqa: N802
         route = urlparse(self.path).path
+        # SPA 模式：web/ 前端构建产物存在时优先托管（API 与导出路由不受影响）
+        if (WEB_DIST / "index.html").is_file():
+            if route == "/":
+                self._send_html(WEB_DIST / "index.html")
+                return
+            if route == "/setup.html":
+                self._send_redirect("/#/setup")
+                return
+            if route.startswith("/assets/"):
+                asset = WEB_DIST / "assets" / Path(route[len("/assets/"):]).name
+                if asset.is_file():
+                    self._send_asset(asset)
+                    return
+            if route.startswith("/tools/"):
+                slug = route[len("/tools/"):].strip("/")
+                target = _SPA_REDIRECTS.get(slug)
+                if target:
+                    self._send_redirect(f"/#/{target}")
+                    return
         if route == "/":
             self._send_html(WEB_DIR / "index.html")
         elif route == "/setup.html":
@@ -919,13 +927,15 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send_html(Path(tool.get("web_dir", WEB_DIR)) / tool["page"])
         elif route == "/api/appinfo":
-            info: dict[str, Any] = {"demo": RUNTIME.demo, "trial": False,
+            info: dict[str, Any] = {"demo": RUNTIME.demo,
                                     "setup_url": "/setup.html"}
-            if not RUNTIME.demo:
-                f = RUNTIME.fetcher()
-                inner = getattr(f, "inner", f)
-                uses = getattr(inner, "uses_trial_key", None)
-                info["trial"] = bool(uses()) if uses else False
+            if RUNTIME.demo:
+                snap = _demo_snapshot()
+                if snap and snap.get("as_of"):
+                    info["demo_as_of"] = snap["as_of"]
+                names = _demo_data().get("names") or {}
+                info["demo_symbols"] = [{"code": c, "name": n}
+                                        for c, n in names.items()]
             self._send_json(200, info)
         elif route == "/api/tools":
             self._send_json(200, {"tools": [
@@ -993,10 +1003,27 @@ class Handler(BaseHTTPRequestHandler):
         if not path.exists():
             self._send(404, b"", "text/plain")
             return
-        ctype = {"css": "text/css; charset=utf-8",
-                 "png": "image/png"}.get(path.suffix.lstrip("."),
-                                          "application/javascript; charset=utf-8")
+        self._send_asset(path)
+
+    def _send_asset(self, path: Path) -> None:
+        ctype = {
+            ".css": "text/css; charset=utf-8",
+            ".js": "application/javascript; charset=utf-8",
+            ".mjs": "application/javascript; charset=utf-8",
+            ".html": "text/html; charset=utf-8",
+            ".png": "image/png",
+            ".svg": "image/svg+xml",
+            ".ico": "image/x-icon",
+            ".woff2": "font/woff2",
+            ".json": "application/json; charset=utf-8",
+        }.get(path.suffix, "application/octet-stream")
         self._send(200, path.read_bytes(), ctype)
+
+    def _send_redirect(self, location: str) -> None:
+        self.send_response(302)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     # ---- POST ----
     def do_POST(self) -> None:  # noqa: N802
@@ -1036,10 +1063,21 @@ def main(argv: list[str] | None = None) -> int:
                         help="使用内置样例数据，无需 finpipe 凭证")
     args = parser.parse_args(argv)
     RUNTIME.demo = args.demo
+    auto_demo = False
+    if not args.demo and not fetchers.has_own_credentials():
+        # 体验 Key 路径已下线：没有自己的 Key 不再蹭 SDK 内置共享池，直接进演示
+        RUNTIME.demo = True
+        auto_demo = True
 
     host = "127.0.0.1"
     print(f"\n  收息佬（big-winner）  →  http://{host}:{args.port}")
-    print(f"  模式：{'demo（样例数据）' if args.demo else '真实取数（finpipe）'}")
+    print(f"  模式：{'demo（真实数据快照）' if RUNTIME.demo else '真实取数（finpipe）'}")
+    if auto_demo:
+        as_of = (_demo_snapshot() or {}).get("as_of")
+        print(f"  未检测到自己的 Key，已进入演示模式（历史快照"
+              + (f"，截止 {as_of}" if as_of else "") + "，非实时）。")
+        print(f"  配置自己的 Key 后页面内「换 Key」即变实时："
+              f"http://{host}:{args.port}/#/setup")
     for slug, tool in TOOLS.items():
         print(f"   · {tool['title']:<12} http://{host}:{args.port}/tools/{slug}/")
     print("\n  Ctrl+C 退出\n")

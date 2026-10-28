@@ -10,19 +10,20 @@ from typing import Any, Iterable, Sequence
 from bigwinner.shouxi.tools.dividend_xray import Fetcher
 
 
-def using_trial_key(cli: Any) -> bool:
-    """客户端是否在用内置体验 AppID（共享池、额度有限）。
+def has_own_credentials() -> bool:
+    """本机是否配置了自己的 finpipe 凭证（环境变量或 ~/.finpipe/credentials.env）。
 
-    精确路径：与 finpipe 内置体验凭证比对 client_id（rekey 后自然变 False）；
-    finpipe 不可用时退化为环境变量检测（未显式配置即视为体验 Key）。
+    只认显式配置——SDK 内置的共享体验 AppID 不算数：工具已下线体验 Key
+    路径，无自有凭证时服务应进演示模式而不是悄悄蹭共享池。
     """
-    try:
-        from finpipe._experience import credentials as _experience_credentials
-        return str(getattr(cli, "client_id", "")) == str(_experience_credentials()[0])
-    except Exception:  # noqa: BLE001 - 未安装/老版本 SDK 时退化为配置检测
-        import os
-        return not (os.environ.get("FINPIPE_CLIENT_ID")
-                    or os.environ.get("OPEN_PLATFORM_CLIENT_ID"))
+    import os
+    from pathlib import Path
+
+    cid = os.environ.get("FINPIPE_CLIENT_ID") or os.environ.get("OPEN_PLATFORM_CLIENT_ID")
+    if cid and (os.environ.get("FINPIPE_CLIENT_SECRET")
+                or os.environ.get("OPEN_PLATFORM_CLIENT_SECRET")):
+        return True
+    return Path.home().joinpath(".finpipe", "credentials.env").is_file()
 
 
 def _digits(code: str) -> str:
@@ -143,12 +144,6 @@ class FinpipeFetcher:
         self._hk_client = finpipe.Client(
             client_id=client_id, client_secret=client_secret, market="hk")
         self._hk_tried = True
-
-    def uses_trial_key(self) -> bool:
-        """是否仍在用内置体验 Key（rekey 之后为 False）。"""
-        return using_trial_key(self.cli)
-        self._hk_error = None
-        self._fx_cache.clear()
 
     def prices(self, codes: Sequence[str]) -> dict[str, float | None]:
         """最新收盘价。

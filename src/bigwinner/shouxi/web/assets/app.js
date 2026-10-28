@@ -1299,7 +1299,7 @@
       result.innerHTML = `<div class="error"><strong>取数失败：</strong>${esc(msg)}
         <div style="margin-top:8px;color:var(--text-2)">${
           isRate
-            ? '共享体验 Key 的小时额度已用完。<button class="link" onclick="showKeyPanel()">🔑 立即配置自己的 Key</button>（两分钟，额度独立不再限流）；或等下一个整点自动恢复。'
+            ? '数据源的小时额度已用完。<button class="link" onclick="showKeyPanel()">🔑 立即配置自己的 Key</button>（两分钟，额度独立）；或等下一个整点自动恢复。'
             : '401/403 → <button class="link" onclick="showKeyPanel()">检查 Key 配置</button>。'
         }</div></div>`;
     }
@@ -1437,7 +1437,7 @@
       <div class="card-head"><h2>finpipe 数据 Key</h2>
         <span class="hint">${status.custom
           ? '✓ 正在使用你自己的 Key（额度独立）'
-          : '当前使用共享体验 Key：可用但额度有限，高峰会 429 限流'}</span></div>
+          : '当前没有检测到自己的 Key。填入并验证通过后立即生效'}</span></div>
       <p class="muted" style="margin:0 0 10px;font-size:12.5px">
         到 <a href="https://open.winmale.com" target="_blank" rel="noopener">open.winmale.com</a>
         微信扫码登录 →「我的」→「开放平台」→「我的应用」→ 复制 client_id 与 api-key。
@@ -1808,10 +1808,8 @@
     // Key 状态徽章（右上角，一眼看清数据源）
     api('key-status').then((s) => {
       document.getElementById('key-badge').innerHTML = s.demo
-        ? '<span class="badge ok">演示模式 · 内置样例数据（非实时）</span>'
-        : s.custom
-          ? '<span class="badge ok">已用自己的 Key</span>'
-          : '<span class="badge warn">共享体验 Key · 额度有限</span>';
+        ? '<span class="badge ok">演示模式 · 真实数据快照（非实时）</span>'
+        : '<span class="badge ok">已用自己的 Key</span>';
     }).catch(() => {});
 
     // 「更多」折叠

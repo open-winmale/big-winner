@@ -18,8 +18,8 @@ from bigwinner.bigly import channel as ch_mod
 from bigwinner.bigly import levels as lv_mod
 from bigwinner.bigly import suggest as sg_mod
 from bigwinner.bigly.fetchers import DemoBiglyData, FinpipeBiglyData
+from bigwinner.common.fetchers import has_own_credentials
 from bigwinner.common.symbols import SymbolDirectory
-from bigwinner.common.fetchers import using_trial_key
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
@@ -197,11 +197,7 @@ def make_handler(data, directory: SymbolDirectory | None = None):  # noqa: C901 
                             "total": len(directory),
                             "as_of": directory.freshness(market)})
             elif path == "/api/appinfo":
-                demo = bool(getattr(data, "demo", False))
-                cli = getattr(data, "_cli", None)
-                self._json({"demo": demo,
-                            "trial": bool(not demo and cli is not None
-                                          and using_trial_key(cli)),
+                self._json({"demo": bool(getattr(data, "demo", False)),
                             "setup_url": None})
             elif path == "/api/bigly/meta":
                 self._json({"tool": TOOL_META, "demo": getattr(data, "demo", False)})
@@ -237,12 +233,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--demo", action="store_true",
                         help="内置样例数据，无需凭证不联网")
     args = parser.parse_args(argv)
-    data = build_data(args.demo)
-    if not args.demo:
-        print("提示：真实取数需要 finpipe 凭证（FINPIPE_CLIENT_ID/SECRET 或 "
-              "~/.finpipe/credentials.env）；无凭证可加 --demo 看样例。", file=sys.stderr)
+    demo = args.demo
+    if not demo and not has_own_credentials():
+        # 体验 Key 路径已下线：没有自己的 Key 不再蹭 SDK 内置共享池，直接进演示
+        demo = True
+        print("未检测到自己的 Key，已进入演示模式（样例数据，非实时）；"
+              "配置自己的凭证后重启即为实时取数。", file=sys.stderr)
+    data = build_data(demo)
     print(f"波段 · http://{args.host}:{args.port}/tools/bigly/"
-          + ("（演示数据）" if args.demo else ""), file=sys.stderr)
+          + ("（演示数据）" if demo else ""), file=sys.stderr)
     ThreadingHTTPServer((args.host, args.port),
                         make_handler(data)).serve_forever()
     return 0

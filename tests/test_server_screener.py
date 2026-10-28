@@ -17,6 +17,9 @@ import bigwinner.shouxi.server as srv
 def base_url():
     srv.RUNTIME.demo = True
     srv._SCREENER_DATA = None   # 强制按 demo 重建筛选取数实例
+    # 本模块测旧多页托管；本机构建过网页版时（web_dist 存在）强制走 legacy 分支
+    web_dist_orig = srv.WEB_DIST
+    srv.WEB_DIST = web_dist_orig.parent / "__no_spa__"
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), srv.Handler)
     port = httpd.server_address[1]
     t = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -24,6 +27,7 @@ def base_url():
     time.sleep(0.05)
     yield f"http://127.0.0.1:{port}"
     httpd.shutdown()
+    srv.WEB_DIST = web_dist_orig
     srv.RUNTIME.demo = False
     srv._SCREENER_DATA = None
 
@@ -52,7 +56,7 @@ def _post(url, payload):
 def test_screener_page_served(base_url):
     status, html = _get_text(base_url + "/tools/screener/")
     assert status == 200
-    assert "筛选" in html and "开始选股" in html and "格雷厄姆" in html
+    assert "选股" in html and "开始选股" in html and "格雷厄姆" in html
 
 
 def test_index_lists_screener(base_url):
@@ -65,7 +69,7 @@ def test_api_tools_lists_screener_without_internal_keys(base_url):
     status, body = _get_json(base_url + "/api/tools")
     assert status == 200
     entry = next(t for t in body["tools"] if t["slug"] == "screener")
-    assert entry["title"] == "筛选"
+    assert entry["title"] == "选股"
     assert "page" not in entry and "web_dir" not in entry
 
 

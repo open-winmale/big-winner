@@ -48,8 +48,8 @@
 <main class="wrap">
   <div class="page-head">
     <h1>配置自己的 Key</h1>
-    <p>本工具默认使用内置的共享体验 Key——可用但额度有限、高峰可能限流（429）。
-       申请自己的 AppID 后额度充足、互不影响，全程免费（非商业用途）。</p>
+    <p>没有配置 Key 时，工具运行在演示模式——页面是真实数据的历史快照（截止日期见启动日志），
+       只能看有限的示例标的。申请自己的 AppID 后即为实时全市场数据，额度充足，全程免费（非商业用途）。</p>
   </div>
 
   <section class="card">
@@ -81,7 +81,7 @@ FINPIPE_CLIENT_SECRET=你的api-key</pre>
         <h3>重启服务（去掉 --demo）</h3>
         <pre class="block">cd big-winner
 PYTHONPATH=src python -m bigwinner.server --port 8787</pre>
-        <p>页面右上角不再显示体验模式提示，即为你自己的 Key 在取数。</p>
+        <p>配置凭证后启动即为实时取数；未配置凭证会自动进演示模式并在启动日志注明。</p>
       </div>
     </div>
 
@@ -96,13 +96,13 @@ PYTHONPATH=src python -m bigwinner.server --port 8787</pre>
     <table class="troubleshoot">
       <tbody>
         <tr><td>403 / POLICY_DENIED</td>
-            <td>体验 Key 的策略限制（部分接口不允许）。配置自己的 AppID 即可；若已有自己的 Key 仍报错，确认 Key 复制完整、未过期。</td></tr>
+            <td>确认 Key 复制完整、未过期；你的 AppID 策略需允许所调用的接口。换 Key 后立即生效，无需重启。</td></tr>
         <tr><td>429 / 频繁限流</td>
-            <td>体验 Key 是共享池，高峰被限流属正常。配置自己的 Key 后额度独立；工具遇 429 会自动退避重试一次。</td></tr>
+            <td>数据源小时额度用完。工具遇 429 会自动退避重试一次；等下一个整点恢复，或换一个额度充足的 Key。</td></tr>
         <tr><td>某字段显示 —</td>
-            <td>该标的此字段接口未返回（如未分红史、指标缺失）。工具不做猜测填充，缺失会显式标在该行「数据说明」。</td></tr>
+            <td>该标的此字段接口未返回（如无分红史、指标缺失）。工具不做猜测填充，缺失会显式标在该行「数据说明」。</td></tr>
         <tr><td>价格略低于盘中价</td>
-            <td>现价取最新一根日 K 收盘价（体验 Key 不支持盘中快照接口）。自己的 AppID 额度允许时可换回盘中接口。</td></tr>
+            <td>现价取最新一根日 K 收盘价。这是工具的取数口径，保证全市场一致、可回放。</td></tr>
       </tbody>
     </table>
   </section>

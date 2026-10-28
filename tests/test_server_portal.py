@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import pathlib  # noqa: F401 - monkeypatch "pathlib.Path.home" 字符串目标的可读性提示
 import threading
 import time
 import urllib.request
@@ -21,6 +22,9 @@ from bigwinner.bigly.fetchers import DemoBiglyData
 def base_url():
     srv.RUNTIME.demo = True
     srv._BIGLY_DATA = None  # 强制按 demo 重建波段取数实例
+    # 本模块测旧多页托管；本机构建过网页版时（web_dist 存在）强制走 legacy 分支
+    web_dist_orig = srv.WEB_DIST
+    srv.WEB_DIST = web_dist_orig.parent / "__no_spa__"
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), srv.Handler)
     port = httpd.server_address[1]
     t = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -28,6 +32,7 @@ def base_url():
     time.sleep(0.05)
     yield f"http://127.0.0.1:{port}"
     httpd.shutdown()
+    srv.WEB_DIST = web_dist_orig
     srv.RUNTIME.demo = False
     srv._BIGLY_DATA = None
 
@@ -124,43 +129,82 @@ def test_registry_entry_points_to_existing_page():
     assert page.is_file()
 
 
-def test_appinfo_demo_reports_no_trial(base_url):
-    """demo 模式用罐头数据不消耗 Key：appinfo 恒 trial=False。"""
+def test_appinfo_demo_reports_snapshot(base_url):
+    """demo 模式：appinfo 报告快照日期与示例标的，且不再有 trial 字段。"""
     with urllib.request.urlopen(base_url + "/api/appinfo") as r:
         info = json.load(r)
-    assert info["demo"] is True and info["trial"] is False
+    assert info["demo"] is True
     assert info["setup_url"] == "/setup.html"
+    assert "trial" not in info
+    if "demo_as_of" in info:
+        assert info["demo_symbols"], "报了截止日期就应报示例标的"
 
 
-def test_using_trial_key_env_fallback(monkeypatch):
-    """finpipe 不可用时的退化路径：未显式配置即视为体验 Key。"""
-    import sys
+def test_has_own_credentials(monkeypatch, tmp_path):
+    """只认显式配置：环境变量或 ~/.finpipe/credentials.env；SDK 体验凭证不算。"""
+    from bigwinner.common.fetchers import has_own_credentials
 
-    from bigwinner.common.fetchers import using_trial_key
-
-    class Cli:
-        client_id = "someone"
-
-    # 模拟未安装 finpipe：父子模块缓存都要置 None（全量跑时子模块可能已被先前的测试导入并缓存）
-    monkeypatch.setitem(sys.modules, "finpipe", None)
-    monkeypatch.setitem(sys.modules, "finpipe._experience", None)
     monkeypatch.delenv("FINPIPE_CLIENT_ID", raising=False)
     monkeypatch.delenv("OPEN_PLATFORM_CLIENT_ID", raising=False)
-    assert using_trial_key(Cli()) is True
+    monkeypatch.delenv("FINPIPE_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("OPEN_PLATFORM_CLIENT_SECRET", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert has_own_credentials() is False
+
     monkeypatch.setenv("FINPIPE_CLIENT_ID", "mine")
-    assert using_trial_key(Cli()) is False
+    monkeypatch.setenv("FINPIPE_CLIENT_SECRET", "mine-secret")
+    assert has_own_credentials() is True
+
+    monkeypatch.delenv("FINPIPE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("FINPIPE_CLIENT_SECRET", raising=False)
+    cred = tmp_path / ".finpipe" / "credentials.env"
+    cred.parent.mkdir()
+    cred.write_text("FINPIPE_CLIENT_ID=x\nFINPIPE_CLIENT_SECRET=y\n")
+    assert has_own_credentials() is True
 
 
-def test_fetcher_uses_trial_key():
-    """自有凭证 → False；体验凭证 → True（精确比对依赖 finpipe，回退路径另有专测）。"""
-    pytest.importorskip("finpipe")
-    from bigwinner.common.fetchers import FinpipeFetcher, using_trial_key
-    from finpipe._experience import credentials as _exp
+def test_main_auto_demo_without_credentials(monkeypatch, capsys, tmp_path):
+    """体验 Key 下线后：无自有凭证 + 无 --demo → main 自动进演示模式并在控制台注明。"""
+    from bigwinner.common import fetchers
 
-    class Cli:
-        def __init__(self, cid):
-            self.client_id = cid
+    for var in ("FINPIPE_CLIENT_ID", "OPEN_PLATFORM_CLIENT_ID",
+                "FINPIPE_CLIENT_SECRET", "OPEN_PLATFORM_CLIENT_SECRET"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
 
-    assert FinpipeFetcher(client=Cli("my-own"), hk_client=object()).uses_trial_key() is False
-    assert FinpipeFetcher(client=Cli(_exp()[0]), hk_client=object()).uses_trial_key() is True
-    assert using_trial_key(Cli("other")) is False
+    class FakeServer:
+        def __init__(self, addr, handler):
+            pass
+
+        def serve_forever(self):
+            raise KeyboardInterrupt  # 起服务即退出，只验证启动路径与文案
+
+    monkeypatch.setattr(srv, "ThreadingHTTPServer", FakeServer)
+
+    assert srv.main(["--port", "8799"]) == 0
+    out = capsys.readouterr().out
+    assert "演示模式" in out
+    assert "快照" in out
+    assert srv.RUNTIME.demo is True
+    srv.RUNTIME.demo = False
+
+
+def test_main_real_mode_with_credentials(monkeypatch, capsys, tmp_path):
+    """有自有凭证时不自动降级：照常进真实取数模式。"""
+    monkeypatch.setenv("FINPIPE_CLIENT_ID", "mine")
+    monkeypatch.setenv("FINPIPE_CLIENT_SECRET", "mine-secret")
+
+    class FakeServer:
+        def __init__(self, addr, handler):
+            pass
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(srv, "ThreadingHTTPServer", FakeServer)
+
+    assert srv.main(["--port", "8799"]) == 0
+    out = capsys.readouterr().out
+    assert "真实取数" in out
+    assert srv.RUNTIME.demo is False

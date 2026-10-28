@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.6.0 — 2026-10-27
+
+### Added
+
+- **GitHub Pages 只读在线演示回归**（轻量形态）：`scripts/bake_pages_demo.py` 用真实
+  凭证把示例持仓（贵州茅台 1000 股）的收息全套结果、波段 PE/PB × 半年/1 年/2 年的
+  通道与回放、筛选 8 策略的真实执行结果烘成 `web/public/pages-demo.json`（27 条，
+  约 196KB）；`vite build --mode pages` 的 SPA 加载它做纯静态浏览，页顶横幅明示
+  数据截止日期。未烘焙的操作（改持仓、计税切换、自定义区间、存档、观察池推送、
+  换 Key 等）统一弹「本地运行完整工具」指引（含可复制三行命令与换 Key 说明）。
+  新增 `.github/workflows/pages.yml`（push main 自动部署；需在仓库 Settings → Pages
+  选 GitHub Actions 来源）与前端静态传输层 `web/src/api/static.ts`（pages 模式下
+  全部 API 改走静态层，本地/服务端构建行为不变）。README 头部与快速开始加在线
+  体验链接。不移植计算层、不做浏览器直连——Pages 永远只读。
+- **无凭证自动演示模式**（体验 Key 路径下线）：启动时不带 `--demo` 也没有自己的
+  凭证（环境变量或 `~/.finpipe/credentials.env`）→ 自动进入演示模式，启动日志明示
+  「已进入演示模式（历史快照，截止 as_of）」并给出配置指引。不再回落到 finpipe SDK
+  内置共享体验 AppID。门户（:8787）与波段独立入口（:8788）同规则。
+  新增 `has_own_credentials()`；SPA 顶栏下新增**演示横幅**（数据截止日期 + 示例标的
+  + 「换 Key 解锁实时」）；演示模式下分析快照外标的时结果区出现换 Key 引导条。
+
+### Changed
+
+- **工具「筛选」更名为「选股」**（用户反馈）：首页卡片、选股页标题、后端工具
+  注册表、legacy 多页与 README 同步改名；观察池分组前缀「筛选·」→「选股·」。
+  路由与旧链接不变（`/tools/screener/` → `/#/screener` 照常 302）。
+- **首页标题重写**：「把雪球上被反复追问的那几张表，做成一条命令」→
+  「给攒股人的三个小工具：收息透视 · 估值波段 · 条件选股」（原句依赖雪球语境，
+  新访客看不懂）。
+- **demo 快照缩到单只示例（贵州茅台 600519）**（用户决定）：`bake_demo_data.py`
+  从 21 只标的改为 1 只（约 110 次 → 约 7 次 API 调用），`demo_data.json`
+  214KB → 12KB；兜底样例同步缩为茅台单票。演示看门面，全市场留给换 Key 后的实时。
+- **体验 Key 相关 UI 全部移除**：SPA 的 `TrialHintModal`、「共享体验 Key · 额度有限」
+  徽章与 `/api/appinfo` 的 `trial` 字段；legacy 多页的 `trial_key.js`、波段页内联
+  体验提示、筛选页 trial 遮罩；setup 页（SPA + legacy）改写为演示模式叙事。
+  KeyDialog 三态改两态（演示快照 / 自有 Key）。
+- **顺手修复**：`FinpipeFetcher.uses_trial_key` 后的不可达死代码随删除清理；
+  `BiglyPage` 模板中残留的未声明 `manualMetric` 赋值移除（`vue-tsc` 恢复全绿）。
+
 ## 1.5.0 — 2026-10-26
 
 ### Added

@@ -180,10 +180,11 @@ def test_shouxi_portal_registry():
     assert (srv.Path(entry["web_dir"]) / "bigly.html").is_file()
 
 
-def test_appinfo_demo_reports_no_trial(base_url):
+def test_appinfo_demo(base_url):
     """波段独立 server：demo 模式不消耗 Key，setup_url 为 None（无 setup 页）。"""
     base, _ = base_url
     with urllib.request.urlopen(base + "/api/appinfo") as r:
         info = json.load(r)
-    assert info["demo"] is True and info["trial"] is False
+    assert info["demo"] is True
+    assert "trial" not in info
     assert info["setup_url"] is None

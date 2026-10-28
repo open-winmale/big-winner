@@ -14,3 +14,7 @@ data/
 .mypy_cache/
 build/
 dist/
+# 网页版前端（web/）
+web/node_modules/
+web/dist-pages/
+src/bigwinner/shouxi/web_dist/
