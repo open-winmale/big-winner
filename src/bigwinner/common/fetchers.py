@@ -116,7 +116,27 @@ class WmshareFetcher:
         self._hk_client = hk_client
         self._hk_tried = hk_client is not None
         self._hk_error: str | None = None
+        #: 最近一次取数中出现的凭证类异常（advisory；handler 透传给前端展示）
+        self.auth_error: str | None = None
         self._fx_cache: dict[str, float | None] = {}
+
+    def note_auth_error(self, exc: BaseException) -> None:
+        """疑似凭证类异常 → 记到 auth_error；只做提示，不改变取数行为。
+
+        识别口径：SDK 的 AuthError、HTTP 401/403、文案含「凭证」等。
+        由 handler 在每次新生成前 clear、结束后读取——横幅只反映最近一次取数。
+        """
+        name = type(exc).__name__
+        text = str(exc)
+        low = text.lower()
+        if (name in ("AuthError", "AuthenticationError", "PermissionError")
+                or "401" in text or "403" in text
+                or "凭证" in text or "token" in low
+                or "unauthorized" in low or "forbidden" in low):
+            self.auth_error = f"{name}: {text[:120]}"
+
+    def clear_auth_error(self) -> None:
+        self.auth_error = None
 
     def hk_cli(self) -> Any | None:
         """港股 client：懒加载，失败返回 None（港股字段显式缺失即可）。"""
@@ -127,6 +147,7 @@ class WmshareFetcher:
                 self._hk_client = wmshare.Client.from_env(market="hk")
             except Exception as exc:  # noqa: BLE001 - 港股通道失败不拖垮 A 股
                 self._hk_error = f"{type(exc).__name__}: {exc}"
+                self.note_auth_error(exc)
         return self._hk_client
 
     def _cli_for(self, code: str) -> Any | None:
@@ -144,6 +165,7 @@ class WmshareFetcher:
         self._hk_client = wmshare.Client(
             client_id=client_id, client_secret=client_secret, market="hk")
         self._hk_tried = True
+        self.auth_error = None  # 新 Key 新开始
 
     def prices(self, codes: Sequence[str]) -> dict[str, float | None]:
         """最新收盘价。
@@ -167,19 +189,21 @@ class WmshareFetcher:
                     bars = cli.call("kline.query_bars", sym=_query_code(code),
                                     limit=1) or []
                 out[code] = _num(bars[0].get("close")) if bars else None
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                self.note_auth_error(exc)
                 out[code] = None
         return out
 
-    @staticmethod
-    def _batch(cli: Any, fn: str, syms: list[str], **kwargs: Any) -> Any:
+    def _batch(self, cli: Any, fn: str, syms: list[str], **kwargs: Any) -> Any:
         """一次 HTTP 批量；任一标的失败再降级逐标的，避免整批丢数据。"""
         try:
             return cli.call_batch(fn, syms, on_error="raise", **kwargs)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            self.note_auth_error(exc)
             try:
                 return cli.call_batch(fn, syms, on_error="skip", **kwargs)
-            except Exception:  # noqa: BLE001
+            except Exception as exc2:  # noqa: BLE001
+                self.note_auth_error(exc2)
                 return None
 
     def dividend_snapshot(self, codes: Sequence[str]) -> dict[str, dict[str, float | None]]:
@@ -223,14 +247,22 @@ class WmshareFetcher:
         cli = self._cli_for(code)
         if cli is None:
             return None
-        return cli.indicator.get(_query_code(code), metric_code)
+        try:
+            return cli.indicator.get(_query_code(code), metric_code)
+        except Exception as exc:  # noqa: BLE001 - 记录后照常上抛（上层单票隔离）
+            self.note_auth_error(exc)
+            raise
 
     def metrics(self, code: str, metric_codes: Sequence[str]) -> dict[str, float | None]:
         """一次取多个指标（港股 EPS/DPS/分位合并为一次请求）。"""
         cli = self._cli_for(code)
         if cli is None:
             return {c: None for c in metric_codes}
-        got = cli.indicator.metrics(_query_code(code), list(metric_codes)) or {}
+        try:
+            got = cli.indicator.metrics(_query_code(code), list(metric_codes)) or {}
+        except Exception as exc:  # noqa: BLE001 - 记录后照常上抛（上层单票隔离）
+            self.note_auth_error(exc)
+            raise
         if not isinstance(got, dict):
             return {c: None for c in metric_codes}
         out: dict[str, float | None] = {}
@@ -243,7 +275,11 @@ class WmshareFetcher:
         cli = self._cli_for(code)
         if cli is None:
             return []
-        rows = cli.dividend.history(_query_code(code), limit=limit) or []
+        try:
+            rows = cli.dividend.history(_query_code(code), limit=limit) or []
+        except Exception as exc:  # noqa: BLE001 - 记录后照常上抛（上层单票隔离）
+            self.note_auth_error(exc)
+            raise
         # friendly 层返回的日期字段是 ex_date/pay_date/announce，计算层统一吃 sas
         out = []
         for r in rows:
@@ -321,7 +357,8 @@ class WmshareFetcher:
         )
         try:
             rows = cli.eval_result(xs, symbol=symbol) or []
-        except Exception:  # noqa: BLE001 - 指数接口不可用 → 空池
+        except Exception as exc:  # noqa: BLE001 - 指数接口不可用 → 空池
+            self.note_auth_error(exc)
             return []
         if isinstance(rows, dict):
             rows = rows.get("rows") or []
@@ -367,7 +404,8 @@ class WmshareFetcher:
         if cli is not None:
             try:
                 rate = cli.indicator.get("00700", "$CR_HKD_LAST")
-            except Exception:  # noqa: BLE001 - 汇率失败只影响折算
+            except Exception as exc:  # noqa: BLE001 - 汇率失败只影响折算
+                self.note_auth_error(exc)
                 rate = None
         self._fx_cache["HKD"] = _num(rate)
         return self._fx_cache["HKD"]
@@ -423,7 +461,8 @@ class WmshareFetcher:
         )
         try:
             data = cli.eval_result(xs, symbol=bare)
-        except Exception:  # noqa: BLE001 - 单票质量取数失败 → 上层显式缺失
+        except Exception as exc:  # noqa: BLE001 - 单票质量取数失败 → 上层显式缺失
+            self.note_auth_error(exc)
             return {}
         if not isinstance(data, dict):
             return {}
@@ -476,7 +515,8 @@ class WmshareFetcher:
         )
         try:
             data = cli.eval_result(xs, symbol=_query_code(code))
-        except Exception:  # noqa: BLE001 - 档案失败 → 上层显式缺失
+        except Exception as exc:  # noqa: BLE001 - 档案失败 → 上层显式缺失
+            self.note_auth_error(exc)
             return {}
         if not isinstance(data, dict):
             return {}
@@ -499,6 +539,16 @@ class CachedFetcher:
         self.inner = inner
         self.ttl = ttl
         self._store: dict[tuple[str, Any], tuple[float, Any]] = {}
+
+    @property
+    def auth_error(self) -> str | None:
+        """透传内层的凭证错误标记（FakeFetcher 无此属性 → None）。"""
+        return getattr(self.inner, "auth_error", None)
+
+    def clear_auth_error(self) -> None:
+        clear = getattr(self.inner, "clear_auth_error", None)
+        if clear is not None:
+            clear()
 
     def _memo(self, key: tuple[str, Any], producer: Any) -> Any:
         now = time.time()

@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 from bigwinner.common.fetchers import (
+    CachedFetcher,
     FakeFetcher,
     WmshareFetcher,
     _market,
@@ -210,3 +211,69 @@ def test_high_yield_symbols_uses_index_query():
         "yield_ttm": 0.05,
     }]
     assert any(c[1] == "eval_result" for c in calls)
+
+
+# ---- 凭证错误显式化：AuthError/401/403 记录到 auth_error，其余异常不误报 ----
+
+
+class AuthError(Exception):
+    """模拟 wmshare.errors.AuthError（按类名识别）。"""
+
+
+class _RaisingClient:
+    """异常可控的假 client：call/get/history 各通道独立注入异常。"""
+
+    def __init__(self, call_exc=None, get_exc=None, history_exc=None) -> None:
+        self.call_exc = call_exc
+        self.get_exc = get_exc
+        self.history_exc = history_exc
+        self.indicator = self
+        self.dividend = self
+
+    def call(self, name: str, **kw):
+        if self.call_exc is not None:
+            raise self.call_exc
+        return [{"close": 10.0}]
+
+    def get(self, code: str, metric_code: str):
+        if self.get_exc is not None:
+            raise self.get_exc
+        return 1.0
+
+    def history(self, code: str, limit: int = 20):
+        if self.history_exc is not None:
+            raise self.history_exc
+        return []
+
+
+def test_auth_error_noted_when_price_call_rejected():
+    f = WmshareFetcher(client=_RaisingClient(
+        call_exc=RuntimeError("HTTP 401 Unauthorized")))
+    assert f.prices(["600036"]) == {"600036": None}
+    assert f.auth_error is not None and "401" in f.auth_error
+    f.clear_auth_error()
+    assert f.auth_error is None
+
+
+def test_auth_error_noted_and_reraised_on_metric():
+    f = WmshareFetcher(client=_RaisingClient(get_exc=AuthError("凭证校验失败")))
+    with pytest.raises(AuthError):
+        f.metric("600036", "$DPS_TTM_LAST_REAL")
+    assert f.auth_error is not None and "AuthError" in f.auth_error
+
+
+def test_non_auth_errors_are_not_flagged():
+    f = WmshareFetcher(client=_RaisingClient(call_exc=ValueError("bad json")))
+    assert f.prices(["600036"]) == {"600036": None}
+    assert f.auth_error is None
+
+
+def test_cached_fetcher_delegates_auth_error():
+    inner = WmshareFetcher(client=_RaisingClient(
+        call_exc=RuntimeError("HTTP 403 Forbidden")))
+    cached = CachedFetcher(inner)
+    assert cached.auth_error is None
+    cached.prices(["600036"])
+    assert cached.auth_error is not None and "403" in cached.auth_error
+    cached.clear_auth_error()
+    assert inner.auth_error is None

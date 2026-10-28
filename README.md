@@ -297,7 +297,7 @@ src/bigwinner/
                          # fetchers（CN/HK 双 client）/ symbols（离线代码目录）/
                          # export（CSV）/ watchlist_sync（观察分组/高股息池，需 wm.sh 门面）
 docs/                   # 设计草稿（screener UI/UX 等）
-tests/                  # 23 个文件 / 190 个离线用例
+tests/                  # 23 个文件 / 195 个离线用例
 web/                    # 网页版前端（Vue3 + Vite + TS，见下节）
 ```
 
@@ -331,7 +331,7 @@ python -m pytest tests -q     # 离线，不需要凭证（CI 每次 push 自动
 cd web && npm test            # 前端单测（CI web job 同跑 typecheck + build）
 ```
 
-23 个文件、190 个用例，覆盖：收息侧加权口径、缺失不污染汇总、税档与覆盖优先级、
+23 个文件、195 个用例，覆盖：收息侧加权口径、缺失不污染汇总、税档与覆盖优先级、
 港股双市场路由、HKD/CNY 折算、分红日历事件解析/税后现金/年息目标、最近持仓自动载入、
 分红质量评分与硬旗标；选股策略注册表、自定义组合编条件、通道解析与不可用降级、
 罐头条件语义与确定性；波段侧估值通道数值对齐、四条约束与放宽标注、多轮回放、

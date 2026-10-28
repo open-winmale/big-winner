@@ -127,6 +127,8 @@ export interface XrayResult {
   disclaimer?: string;
   demo?: boolean;
   snapshot_saved?: boolean;
+  /** 本次取数遇到凭证类错误（Key 无效/过期）——页面据此显示换 Key 横幅 */
+  auth_error?: string;
 }
 
 /* ---------------- 分红质量 ---------------- */

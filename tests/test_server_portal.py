@@ -174,6 +174,26 @@ def test_key_status_recognizes_alias(monkeypatch, tmp_path):
     assert srv.key_status({})["custom"] is True
 
 
+def test_xray_result_carries_auth_error(monkeypatch):
+    """实时模式取数遇凭证类错误：结果带 auth_error，前端据此显示换 Key 横幅。"""
+    from bigwinner.common import fetchers as fetchers_mod
+
+    fake = fetchers_mod.FakeFetcher(prices={"600036": 10.0})
+    monkeypatch.setattr(fake, "auth_error", "AuthError: HTTP 401", raising=False)
+    monkeypatch.setattr(srv.RUNTIME, "_fetcher", fetchers_mod.CachedFetcher(fake))
+    monkeypatch.setattr(srv.STORE, "save_snapshot", lambda *a, **k: None)
+
+    data = srv.run_dividend_xray(
+        {"positions": [{"code": "600036", "market": "cn", "shares": 1000}]})
+    assert data["auth_error"] == "AuthError: HTTP 401"
+
+    # 无凭证错误时结果不带该字段（demo/正常实时路径不受影响）
+    monkeypatch.setattr(fake, "auth_error", None, raising=False)
+    data = srv.run_dividend_xray(
+        {"positions": [{"code": "600036", "market": "cn", "shares": 1000}]})
+    assert "auth_error" not in data
+
+
 def test_main_auto_demo_without_credentials(monkeypatch, capsys, tmp_path):
     """体验 Key 下线后：无自有凭证 + 无 --demo → main 自动进演示模式并在控制台注明。"""
     from bigwinner.common import fetchers

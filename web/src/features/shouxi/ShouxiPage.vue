@@ -131,6 +131,10 @@ async function openHistory(): Promise<void> {
         </div>
       </div>
       <template v-else-if="store.xray">
+        <div v-if="store.xray.auth_error" class="auth-error">
+          ⚠️ 数据源拒绝了请求（凭证可能无效或已过期），页面会出现成片「—」。
+          <button class="link" @click="app.openKeyDialog()">🔑 检查 / 更换 Key</button>
+        </div>
         <div v-if="demoOutside" class="demo-outside">
           演示快照只覆盖示例标的，其余股票没有数据。配置自己的 Key 即解锁全市场实时数据。
           <button class="link" @click="app.openKeyDialog()">🔑 换 Key</button>
@@ -226,6 +230,16 @@ async function openHistory(): Promise<void> {
 </template>
 
 <style scoped>
+/* 凭证被数据源拒绝（Key 无效/过期）的红色警示条：与 demo-outside 同族、红色系 */
+.auth-error {
+  margin-top: 18px;
+  padding: 9px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
 /* 演示快照外标的的换 Key 引导条（amber 警示，同 DemoBanner 家族） */
 .demo-outside {
   margin-top: 18px;

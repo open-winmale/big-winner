@@ -273,6 +273,26 @@ def _fill_names(fetcher: Any, positions: list[Any]) -> None:
             p.name = str(profile["name"])
 
 
+def _reset_auth_note() -> None:
+    """每次新生成前清掉凭证错误标记：横幅只反映最近一次取数。"""
+    clear = getattr(RUNTIME.fetcher(), "clear_auth_error", None)
+    if clear is not None:
+        clear()
+
+
+def _attach_auth_note(result: dict[str, Any]) -> dict[str, Any]:
+    """本次取数遇到凭证类错误（Key 无效/过期）时在结果上显式标注。
+
+    实时模式下各票取数失败是单票隔离的，页面只会看到成片「—」；
+    这个字段让前端能区分「真没数据」和「数据源拒绝了请求」。
+    demo 模式（FakeFetcher）没有该字段，永不触发。
+    """
+    note = getattr(RUNTIME.fetcher(), "auth_error", None)
+    if note:
+        result["auth_error"] = note
+    return result
+
+
 def run_dividend_xray(payload: dict[str, Any]) -> dict[str, Any]:
     items = payload.get("positions") or []
     if not items:
@@ -283,6 +303,7 @@ def run_dividend_xray(payload: dict[str, Any]) -> dict[str, Any]:
     positions = fetchers.positions_from_payload(items)
     if not positions:
         raise ToolError("没有识别到有效持仓行（代码非空、股数为正整数）")
+    _reset_auth_note()
     _fill_names(RUNTIME.fetcher(), positions)
 
     deep = bool(payload.get("deep"))
@@ -297,7 +318,7 @@ def run_dividend_xray(payload: dict[str, Any]) -> dict[str, Any]:
         data["snapshot_saved"] = True
     except Exception:  # noqa: BLE001 - 存档失败不影响主流程
         data["snapshot_saved"] = False
-    return data
+    return _attach_auth_note(data)
 
 
 def save_positions(payload: dict[str, Any]) -> dict[str, Any]:
@@ -425,6 +446,7 @@ def run_ledger(payload: dict[str, Any]) -> dict[str, Any]:
     tax = _tax_options(payload)
 
     fetcher = RUNTIME.fetcher()
+    _reset_auth_note()
     rows_by_code: dict[str, list[dict[str, Any]]] = {}
     for item in items:
         code = item["code"]
@@ -443,7 +465,7 @@ def run_ledger(payload: dict[str, Any]) -> dict[str, Any]:
 
     data = ledger_mod.build_ledger(items, rows_by_code, year=year, tax=tax, fx=fx)
     data["disclaimer"] = DISCLAIMER
-    return data
+    return _attach_auth_note(data)
 
 
 def run_calendar(payload: dict[str, Any]) -> dict[str, Any]:
@@ -455,6 +477,7 @@ def run_calendar(payload: dict[str, Any]) -> dict[str, Any]:
         raise ToolError("日历模式不正确（positions/codes/market）")
 
     fetcher = RUNTIME.fetcher()
+    _reset_auth_note()
     items: list[dict[str, Any]] = []
 
     if mode == "market":
@@ -578,7 +601,7 @@ def run_calendar(payload: dict[str, Any]) -> dict[str, Any]:
     if mode == "market" and items:
         data["market"] = items[0]["market"]
     data["disclaimer"] = DISCLAIMER
-    return data
+    return _attach_auth_note(data)
 
 
 def positions_latest(_: dict[str, Any]) -> dict[str, Any]:
@@ -603,6 +626,7 @@ def run_dividend_quality(payload: dict[str, Any]) -> dict[str, Any]:
         raise ToolError(f"单次最多 {t1.MAX_POSITIONS} 个标的，当前 {len(positions)} 个")
 
     fetcher = RUNTIME.fetcher()
+    _reset_auth_note()
     _fill_names(fetcher, positions)
     items: list[dict[str, Any]] = []
     for p in positions:
@@ -653,7 +677,7 @@ def run_dividend_quality(payload: dict[str, Any]) -> dict[str, Any]:
         "disclaimer": DISCLAIMER,
         "demo": RUNTIME.demo,
     }
-    return out
+    return _attach_auth_note(out)
 
 
 def run_diagnose(payload: dict[str, Any]) -> dict[str, Any]:
@@ -672,6 +696,7 @@ def run_diagnose(payload: dict[str, Any]) -> dict[str, Any]:
     name_hint = str(payload.get("name") or "").strip() or None
 
     fetcher = RUNTIME.fetcher()
+    _reset_auth_note()
     notes: list[str] = []
 
     # 1) 档案（含企业类型；CN/HK 都可用，org_form 仅 CN）
@@ -745,7 +770,7 @@ def run_diagnose(payload: dict[str, Any]) -> dict[str, Any]:
     if market == "hk" and not profile.get("org_form"):
         notes.append("企业类型仅 A 股提供，港股暂无该标签")
 
-    return {
+    return _attach_auth_note({
         "code": item_code,
         "market": market,
         "profile": profile,
@@ -755,7 +780,7 @@ def run_diagnose(payload: dict[str, Any]) -> dict[str, Any]:
         "notes": notes,
         "disclaimer": DISCLAIMER,
         "demo": RUNTIME.demo,
-    }
+    })
 
 
 def run_screener(payload: dict[str, Any]) -> dict[str, Any]:
