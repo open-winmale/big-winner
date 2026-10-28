@@ -1,7 +1,8 @@
 """本地 SQLite 持久层：快照历史 + 持仓档案 + 同步记录。
 
 设计：
-- 零 ORM，标准库 sqlite3，单文件 `data/fptools.db`（gitignore）。
+- 零 ORM，标准库 sqlite3，单文件 `src/data/fptools.db`（gitignore；按本文件
+  位置解析，即 bigwinner 包的上一级 data/ 目录）。
 - 三张表：snapshots（每次生成的组合快照）、position_sets（持久化持仓档案，
   替代"每次重新搜索"）、sync_log（winmale 同步审计）。
 - 历史快照是"超越 Excel"的核心：组合股息率/市值的时序曲线由此出。

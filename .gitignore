@@ -10,6 +10,8 @@ venv/
 data/
 .workbuddy/
 .zcode/
+.hermes/
+docs/promotion-research-2026-10.md
 .ruff_cache/
 .mypy_cache/
 build/

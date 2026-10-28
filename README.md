@@ -53,6 +53,9 @@
 
 ## 快速开始（开箱即演示，换 Key 变实时）
 
+**环境要求**：Python ≥ 3.10（本项目零第三方依赖，无需 pip install 本体）；
+只有网页版前端开发才需要 Node ≥ 18.18 + npm（见「网页版前端」一节）。
+
 ```bash
 # 启动（零依赖：无需 wmshare、无需凭证）——一条命令，工具总览 + 全部小工具
 cd big-winner
@@ -178,6 +181,10 @@ T+1 买入当日不卖；**止盈/止损出场后资金回笼，卖出次日可�
 执行通道：与平台 web「选股」同源（`wm-screen-index` conditions；实测
 `$PE_TTM_LAST`、`$PB_TTM_LAST`、股息率 cn/hk 均可用，2026-10-26），
 **每策略 1 次查询**；通道未配置（无 wm.sh）时页面如实降级提示，不静默。
+「加入观察池」（把选股结果写进 winmale 关注分组）与收息页的观察分组导入
+同样走 `wm.sh` 门面——这是作者本地环境的一部分（skillhub 仓库），外部用户
+暂无开箱即用的替代：未配置时按钮会明确报错并提示 `WM_SH` 的配置方法，
+其余功能不受影响；持仓档案 / 快照 / 导出等本地功能均不依赖它。
 结果按策略口径排序、口径列前置；「—」为取数缺失，不冒充；demo 模式用
 确定性罐头数据，零凭证可试。**选股结果 ≠ 推荐**；深度体检接
 「收息佬 · 分红质量 / 持续性分析」。wmshare 原生 index 积木暂不可用
@@ -286,10 +293,11 @@ src/bigwinner/
     backtest.py          #   多轮进出回放
     fetchers.py          #   波段侧取数
     web/bigly.html
-  common/                # store（SQLite 持仓档案）/ fetchers（CN/HK 双 client）/
-                         # symbols（离线代码目录）/ export（CSV）/ watchlist_sync
+  common/                # store（SQLite 持仓档案，落 src/data/fptools.db，gitignore）/
+                         # fetchers（CN/HK 双 client）/ symbols（离线代码目录）/
+                         # export（CSV）/ watchlist_sync（观察分组/高股息池，需 wm.sh 门面）
 docs/                   # 设计草稿（screener UI/UX 等）
-tests/                  # 22 个文件 / 189 个离线用例
+tests/                  # 23 个文件 / 190 个离线用例
 web/                    # 网页版前端（Vue3 + Vite + TS，见下节）
 ```
 
@@ -323,7 +331,7 @@ python -m pytest tests -q     # 离线，不需要凭证（CI 每次 push 自动
 cd web && npm test            # 前端单测（CI web job 同跑 typecheck + build）
 ```
 
-22 个文件、189 个用例，覆盖：收息侧加权口径、缺失不污染汇总、税档与覆盖优先级、
+23 个文件、190 个用例，覆盖：收息侧加权口径、缺失不污染汇总、税档与覆盖优先级、
 港股双市场路由、HKD/CNY 折算、分红日历事件解析/税后现金/年息目标、最近持仓自动载入、
 分红质量评分与硬旗标；选股策略注册表、自定义组合编条件、通道解析与不可用降级、
 罐头条件语义与确定性；波段侧估值通道数值对齐、四条约束与放宽标注、多轮回放、

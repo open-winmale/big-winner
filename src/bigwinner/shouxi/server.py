@@ -778,7 +778,9 @@ def run_screener(payload: dict[str, Any]) -> dict[str, Any]:
 
 def key_status(_: dict[str, Any]) -> dict[str, Any]:
     """当前凭证状态：是否用着自己的 Key（只回布尔与来源，绝不回 Key 本体）。"""
-    custom = bool(os.environ.get("WMSHARE_CLIENT_ID")) or \
+    env_id = (os.environ.get("WMSHARE_CLIENT_ID")
+              or os.environ.get("OPEN_PLATFORM_CLIENT_ID"))
+    custom = bool(env_id) or \
         Path.home().joinpath(".wmshare", "credentials.env").exists()
     return {"custom": custom, "demo": RUNTIME.demo}
 

@@ -1,18 +1,5 @@
 # Changelog
 
-## Unreleased
-
-### Changed
-
-- **上游数据依赖更名 finpipe → wmshare**：SDK 仓与 PyPI 发行名改为 wmshare
-  （GitHub open-winmale/wmshare，SDK 1.7.0 起用新名）。本仓 import（7 处）、
-  类名（`WmshareFetcher` / `WmshareBiglyData`）、安装指引与页面文案全部同步；
-  凭证配置只认新名：环境变量 `FINPIPE_*` → `WMSHARE_*`、凭证文件
-  `~/.finpipe/credentials.env` → `~/.wmshare/credentials.env`（`OPEN_PLATFORM_*`
-  别名保留，与 SDK `from_env` 口径一致）；安装命令改为
-  `git clone https://github.com/open-winmale/wmshare.git && pip install -e ./wmshare`。
-  已按旧文档配置凭证的用户需迁移到新名（setup 页与 README 均有提示）。
-
 ## 1.6.0 — 2026-10-27
 
 ### Added
@@ -28,14 +15,22 @@
   全部 API 改走静态层，本地/服务端构建行为不变）。README 头部与快速开始加在线
   体验链接。不移植计算层、不做浏览器直连——Pages 永远只读。
 - **无凭证自动演示模式**（体验 Key 路径下线）：启动时不带 `--demo` 也没有自己的
-  凭证（环境变量或 `~/.finpipe/credentials.env`）→ 自动进入演示模式，启动日志明示
-  「已进入演示模式（历史快照，截止 as_of）」并给出配置指引。不再回落到 finpipe SDK
+  凭证（环境变量或 `~/.wmshare/credentials.env`）→ 自动进入演示模式，启动日志明示
+  「已进入演示模式（历史快照，截止 as_of）」并给出配置指引。不再回落到 SDK
   内置共享体验 AppID。门户（:8787）与波段独立入口（:8788）同规则。
   新增 `has_own_credentials()`；SPA 顶栏下新增**演示横幅**（数据截止日期 + 示例标的
   + 「换 Key 解锁实时」）；演示模式下分析快照外标的时结果区出现换 Key 引导条。
 
 ### Changed
 
+- **上游数据依赖更名 finpipe → wmshare**：SDK 仓与 PyPI 发行名改为 wmshare
+  （GitHub open-winmale/wmshare，SDK 1.7.0 起用新名）。本仓 import（7 处）、
+  类名（`WmshareFetcher` / `WmshareBiglyData`）、安装指引与页面文案全部同步；
+  凭证配置只认新名：环境变量 `FINPIPE_*` → `WMSHARE_*`、凭证文件
+  `~/.finpipe/credentials.env` → `~/.wmshare/credentials.env`（`OPEN_PLATFORM_*`
+  别名保留，与 SDK `from_env` 口径一致）；安装命令改为
+  `git clone https://github.com/open-winmale/wmshare.git && pip install -e ./wmshare`。
+  已按旧文档配置凭证的用户需迁移到新名（setup 页与 README 均有提示）。
 - **工具「筛选」更名为「选股」**（用户反馈）：首页卡片、选股页标题、后端工具
   注册表、legacy 多页与 README 同步改名；观察池分组前缀「筛选·」→「选股·」。
   路由与旧链接不变（`/tools/screener/` → `/#/screener` 照常 302）。
@@ -49,8 +44,18 @@
   徽章与 `/api/appinfo` 的 `trial` 字段；legacy 多页的 `trial_key.js`、波段页内联
   体验提示、筛选页 trial 遮罩；setup 页（SPA + legacy）改写为演示模式叙事。
   KeyDialog 三态改两态（演示快照 / 自有 Key）。
-- **顺手修复**：`FinpipeFetcher.uses_trial_key` 后的不可达死代码随删除清理；
+- **顺手修复**：`WmshareFetcher.uses_trial_key` 后的不可达死代码随删除清理；
   `BiglyPage` 模板中残留的未声明 `manualMetric` 赋值移除（`vue-tsc` 恢复全绿）。
+- 补 `CONTRIBUTING.md` 与 `SECURITY.md`；README 增加环境要求小节，并如实说明
+  「加入观察池」推送依赖平台门面（wm.sh）环境。
+
+### Fixed
+
+- 实时模式下后端 500 响应携带的排障提示（401/403 → 配置 Key、429 → 稍后重试）
+  此前前端从未渲染：现在错误文案统一附带 hint，波段与选股页失败提示旁直接给出
+  「配置 Key」入口（收息页原有引导不变）。
+- 顶栏 Key 状态判定与 `has_own_credentials()` 对齐：用 `OPEN_PLATFORM_*` 别名
+  配置凭证的用户也能正确显示「已用自己的 Key」。
 
 ## 1.5.0 — 2026-10-26
 

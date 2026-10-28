@@ -163,6 +163,17 @@ def test_has_own_credentials(monkeypatch, tmp_path):
     assert has_own_credentials() is True
 
 
+def test_key_status_recognizes_alias(monkeypatch, tmp_path):
+    """key_status 与 has_own_credentials 同口径：OPEN_PLATFORM_* 别名也算自己的 Key。"""
+    monkeypatch.delenv("WMSHARE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("OPEN_PLATFORM_CLIENT_ID", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert srv.key_status({})["custom"] is False
+
+    monkeypatch.setenv("OPEN_PLATFORM_CLIENT_ID", "alias")
+    assert srv.key_status({})["custom"] is True
+
+
 def test_main_auto_demo_without_credentials(monkeypatch, capsys, tmp_path):
     """体验 Key 下线后：无自有凭证 + 无 --demo → main 自动进演示模式并在控制台注明。"""
     from bigwinner.common import fetchers
