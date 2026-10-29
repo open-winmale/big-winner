@@ -6,7 +6,7 @@
 
 > A 股 / 港股持仓收息、分红日历与记账（**收息佬**）· 估值买卖点区间参考（**波段**）·
 > 条件选股（**选股**）。
-> **v1.6.0** · [GitHub](https://github.com/open-winmale/big-winner) ·
+> **v1.7.0** · [GitHub](https://github.com/open-winmale/big-winner) ·
 > [在线体验（只读演示）](https://open-winmale.github.io/big-winner/) · 数据来自
 > [wmshare](https://github.com/open-winmale/wmshare)，只做事实与统计聚合；
 > 工具代码 MIT；数据来自 wmshare（BSD-3-Clause 开源；云端数据服务需开放平台凭证/额度）。
