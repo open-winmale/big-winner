@@ -1,6 +1,6 @@
 {
   "name": "big-winner-web",
-  "version": "1.6.0",
+  "version": "1.7.1",
   "private": true,
   "description": "收息佬（big-winner）网页版前端：Vue3 SPA，与 Python 后端（bigwinner.shouxi）同端口部署",
   "type": "module",

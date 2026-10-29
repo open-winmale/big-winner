@@ -2,4 +2,4 @@
 
 工具代码 MIT 开源；数据依赖 wmshare（BSD-3-Clause 开源）。
 """
-__version__ = "1.7.0"
+__version__ = "1.7.1"
