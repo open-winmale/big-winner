@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bigwinner"
-version = "1.7.1"
+version = "1.7.2"
 description = "收息佬（big-winner）：A 股 / 港股持仓收息、分红日历与记账小工具"
 readme = "README.md"
 requires-python = ">=3.10"
