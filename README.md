@@ -57,6 +57,20 @@ AppID；② 三行命令本地启动（Windows / macOS / Linux 通用），页�
 **环境要求**：Python ≥ 3.10（本项目零第三方依赖，无需 pip install 本体）；
 构建网页版门户或参与前端开发才需要 Node ≥ 18.18 + npm（一次性，见下）。
 
+**三种安装方式**（命令细节的唯一口径见 [AGENTS.md](AGENTS.md)）：
+
+| 适合 | 怎么做 |
+|---|---|
+| 小白（不想配环境） | 网页「下载 ZIP」解压 → **Windows 双击 `setup.bat`；macOS 双击 `setup.command`**（首次被拦：右键 → 打开）；**Linux 运行 `./setup.sh`**。自动装 Python 并进入安装向导（装数据依赖、可选构建新版界面、可选录入 AppID/Key，每步可跳过）；以后启动双击 `run.bat` / `run.command` / `run.sh` |
+| 手动安装 | 按下方步骤：`python run.py` 启动 → 需要实时再装 wmshare、页面里粘贴 Key |
+| AI agent / 脚本 | 读 [AGENTS.md](AGENTS.md)：`doctor --json` 体检 → `install-wmshare` / `set-key` 按需补齐 → `run.py` → `curl /api/key-status` 验证 |
+
+也可以只跑安装向导（等价双击 setup.*）：
+
+```bash
+python setup_wizard.py    # 或 macOS/Linux: make setup
+```
+
 ```bash
 # 启动（零依赖：无需 wmshare、无需凭证）——一条命令，工具总览 + 全部小工具
 # python run.py 在 Windows / macOS / Linux 通用（等价 PYTHONPATH=src python -m bigwinner.shouxi）
@@ -76,7 +90,8 @@ cd web && npm ci && npm run build    # 需 Node ≥ 18.18；服务运行中构�
 页顶横幅**明示数据截止日期**；示例仅含贵州茅台（600519），其余标的如实显示缺数据
 并引导配 Key。演示不联网、不消耗任何额度，先把工具看明白。想强制演示可加 `--demo`。
 
-**换 Key 即变实时**（全程无需环境变量）。真实取数需要安装 wmshare（数据依赖）：
+**换 Key 即变实时**（全程无需环境变量）。真实取数需要安装 wmshare（数据依赖），
+安装向导可自动完成（`python setup_wizard.py install-wmshare`），或手动：
 
 ```bash
 git clone https://github.com/open-winmale/wmshare.git && pip install -e ./wmshare

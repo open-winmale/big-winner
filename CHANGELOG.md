@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **跨平台安装向导与双击引导（小白 / 手动 / AI agent 三类入口）**：新增
+  `setup_wizard.py`——交互向导自动安装 wmshare 数据依赖（Gitee → GitHub →
+  ZIP 三级回落，无 git 环境也能装）、可选构建新版网页界面（无 Node 时
+  经典多页界面兜底）、可选录入 AppID/Key（在线验证与页面 key-save 同口径，
+  通过后存 `data/fptools.db`），每一步都可跳过；同时提供非交互子命令
+  `doctor [--json]`（退出码 0=实时就绪 / 1=演示模式可启动 / 2=内部错误）、
+  `install-wmshare`、`build-web`、`set-key` 供脚本与 AI agent 使用。
+  新增双击引导 `setup.bat` / `setup.command` / `setup.sh`（自动准备
+  Python ≥ 3.10：Windows 处理 winget 装后当前窗口 PATH 未刷新、macOS 走
+  Homebrew 或官方命令行工具安装器、Linux 补 python3-pip）与日常启动
+  `run.bat` / `run.command` / `run.sh`。新增开发者 `Makefile`（setup / run /
+  build-web / doctor / test）。README 快速开始按三类用户重排；
+  **AGENTS.md 为安装/启动命令的唯一权威口径**。
+
 ## 1.7.1 — 2026-10-29
 
 ### Fixed
