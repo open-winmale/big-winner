@@ -1116,6 +1116,7 @@ def main(argv: list[str] | None = None) -> int:
         auto_demo = True
 
     host = "127.0.0.1"
+    spa_ready = (WEB_DIST / "index.html").is_file()
     print(f"\n  收息佬（big-winner）  →  http://{host}:{args.port}")
     print(f"  模式：{'demo（真实数据快照）' if RUNTIME.demo else '真实取数（wmshare）'}")
     if auto_demo:
@@ -1125,7 +1126,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  配置自己的 Key 后页面内「换 Key」即变实时："
               f"http://{host}:{args.port}/#/setup")
     for slug, tool in TOOLS.items():
-        print(f"   · {tool['title']:<12} http://{host}:{args.port}/tools/{slug}/")
+        target = _SPA_REDIRECTS.get(slug) if spa_ready else None
+        url = (f"http://{host}:{args.port}/#/{target}" if target
+               else f"http://{host}:{args.port}/tools/{slug}/")
+        print(f"   · {tool['title']:<12} {url}")
+    if not spa_ready:
+        # web_dist 按请求探测，服务运行中构建也会即时切换；本提示仅反映启动时状态。
+        print("  界面：经典多页版（网页版门户未构建）。构建新版（单页导航、页面内换 Key 热切换）：")
+        print("        cd web && npm ci && npm run build"
+              "    # 需 Node ≥ 18.18，构建一次即可，完成后刷新页面即切换，无需重启")
     print("\n  Ctrl+C 退出\n")
     try:
         ThreadingHTTPServer((host, args.port), Handler).serve_forever()

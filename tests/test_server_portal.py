@@ -332,3 +332,51 @@ def test_main_real_mode_with_credentials(monkeypatch, capsys, tmp_path):
     out = capsys.readouterr().out
     assert "真实取数" in out
     assert srv.RUNTIME.demo is False
+
+
+def test_main_banner_hints_build_when_web_dist_missing(monkeypatch, capsys, tmp_path):
+    """web_dist 缺失（源码安装未构建前端）时：横幅明示经典多页版并给出构建指引，不静默回退。"""
+    monkeypatch.setenv("WMSHARE_CLIENT_ID", "mine")
+    monkeypatch.setenv("WMSHARE_CLIENT_SECRET", "mine-secret")
+    monkeypatch.setattr(srv, "WEB_DIST", tmp_path / "__no_web_dist__")
+
+    class FakeServer:
+        def __init__(self, addr, handler):
+            pass
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(srv, "ThreadingHTTPServer", FakeServer)
+
+    assert srv.main(["--port", "8799"]) == 0
+    out = capsys.readouterr().out
+    assert "npm run build" in out
+    assert "/tools/" in out
+    assert "/#/shouxi" not in out
+
+
+def test_main_banner_prints_hash_routes_when_spa_ready(monkeypatch, capsys, tmp_path):
+    """web_dist 已构建时：横幅直接给 SPA hash 链接，且不再出现构建指引。"""
+    monkeypatch.setenv("WMSHARE_CLIENT_ID", "mine")
+    monkeypatch.setenv("WMSHARE_CLIENT_SECRET", "mine-secret")
+    fake_dist = tmp_path / "web_dist"
+    fake_dist.mkdir()
+    (fake_dist / "index.html").write_text("<!doctype html>", encoding="utf-8")
+    monkeypatch.setattr(srv, "WEB_DIST", fake_dist)
+
+    class FakeServer:
+        def __init__(self, addr, handler):
+            pass
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(srv, "ThreadingHTTPServer", FakeServer)
+
+    assert srv.main(["--port", "8799"]) == 0
+    out = capsys.readouterr().out
+    assert "/#/shouxi" in out
+    assert "/#/bigly" in out
+    assert "/#/screener" in out
+    assert "npm run build" not in out

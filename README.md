@@ -55,13 +55,21 @@ AppID；② 三行命令本地启动（Windows / macOS / Linux 通用），页�
 ## 快速开始（开箱即演示，换 Key 变实时）
 
 **环境要求**：Python ≥ 3.10（本项目零第三方依赖，无需 pip install 本体）；
-只有网页版前端开发才需要 Node ≥ 18.18 + npm（见「网页版前端」一节）。
+构建网页版门户或参与前端开发才需要 Node ≥ 18.18 + npm（一次性，见下）。
 
 ```bash
 # 启动（零依赖：无需 wmshare、无需凭证）——一条命令，工具总览 + 全部小工具
 # python run.py 在 Windows / macOS / Linux 通用（等价 PYTHONPATH=src python -m bigwinner.shouxi）
 cd big-winner
 python run.py    # 门户 → http://127.0.0.1:8787
+```
+
+**界面版本说明**：以上默认启动的是**经典多页版**（功能完整，启动横幅会提示）。
+新版**网页版门户**（单页导航、页面内保存/换 Key 热切换）是前端构建产物
+（gitignore 不入仓库），构建一次即得，之后启动自动切换（详见「网页版前端」）：
+
+```bash
+cd web && npm ci && npm run build    # 需 Node ≥ 18.18；服务运行中构建也行，刷新页面即切换
 ```
 
 **开箱即演示模式**：没有自己的 Key 时自动进入演示——页面是真实数据的历史快照，
